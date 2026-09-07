@@ -5,6 +5,7 @@ profiles.yml
 
 # Python
 .venv/
+.bikewatch/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -26,4 +27,4 @@ dbt_bikewatch/dbt_packages/
 
 # Local data
 data/
-*.log
+*.log.bikewatch/
