@@ -1,0 +1,29 @@
+# Secrets
+.env
+.env.local
+profiles.yml
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# dbt
+dbt_bikewatch/target/
+dbt_bikewatch/logs/
+dbt_bikewatch/dbt_packages/
+
+# Editors
+.vscode/
+.idea/
+
+# Operating systems
+.DS_Store
+
+# Local data
+data/
+*.log
