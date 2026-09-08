@@ -175,6 +175,22 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
 
         counts["missing"] = len(tracked - seen)
 
+        # Every valid record is either newly inserted or already stored.
+        if counts["valid"] != (
+            counts["accepted"] + counts["duplicate"]
+        ):
+            raise RuntimeError("Invalid valid-record accounting")
+
+        # Every source entry must have exactly one processing outcome.
+        # Missing stations are absent from the response, so they are
+        # deliberately excluded from this equation.
+        if counts["received"] != (
+            counts["ignored"]
+            + counts["rejected"]
+            + counts["valid"]
+        ):
+            raise RuntimeError("Invalid source-record accounting")
+
         db.execute(
             """
             UPDATE ops.pipeline_run
@@ -183,6 +199,17 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
             """,
             (Jsonb({feed_name: counts}), run_id),
         )
+
+    # The transaction has successfully committed before this log.
+    # If loading or committing raises an exception, this is skipped.
+    print(json.dumps({
+        "event": "batch_committed",
+        "logged_at": now_utc().isoformat(),
+        "run_id": str(run_id),
+        "feed": feed_name,
+        "collection_bucket": bucket.isoformat(),
+        "counts": counts,
+    }), flush=True)
 
     return counts
 

@@ -1,0 +1,73 @@
+{
+  "data": {
+    "stations": [
+      {
+        "station_id": "00284700-9d22-42ce-8485-113fed9879c1",
+        "num_bikes_available": 7,
+        "num_bikes_disabled": 1,
+        "num_docks_available": 11,
+        "num_docks_disabled": 0,
+        "is_installed": 1,
+        "is_renting": 1,
+        "is_returning": 1,
+        "last_reported": 1788897942,
+        "legacy_id": "3691",
+        "num_ebikes_available": 5,
+        "num_scooters_available": 0,
+        "num_scooters_unavailable": 0,
+        "eightd_has_available_keys": false
+      },
+      {
+        "station_id": "002e6e9f-ced2-47b0-bc7e-ccf38c3b4b0f",
+        "num_bikes_available": 4,
+        "num_bikes_disabled": 1,
+        "num_docks_available": 16,
+        "num_docks_disabled": 0,
+        "is_installed": 1,
+        "is_renting": 1,
+        "is_returning": 1,
+        "last_reported": 1788897958,
+        "legacy_id": "3968",
+        "num_ebikes_available": 1,
+        "num_scooters_available": 0,
+        "num_scooters_unavailable": 0,
+        "eightd_has_available_keys": false
+      },
+      {
+        "station_id": "00967b8f-1a4d-4131-a65a-17fa8ca89e28",
+        "num_bikes_available": 4,
+        "num_bikes_disabled": 1,
+        "num_docks_available": 14,
+        "num_docks_disabled": 1,
+        "is_installed": 1,
+        "is_renting": 1,
+        "is_returning": 1,
+        "last_reported": 1788897957,
+        "legacy_id": "4815",
+        "num_ebikes_available": 3,
+        "num_scooters_available": 0,
+        "num_scooters_unavailable": 0,
+        "eightd_has_available_keys": false
+      },
+      {
+        "station_id": "0096fecb-3a56-4585-9204-aa9554f7bc49",
+        "num_bikes_available": 10,
+        "num_bikes_disabled": 3,
+        "num_docks_available": 34,
+        "num_docks_disabled": 0,
+        "is_installed": 1,
+        "is_renting": 1,
+        "is_returning": 1,
+        "last_reported": 1788897941,
+        "legacy_id": "4704",
+        "num_ebikes_available": 6,
+        "num_scooters_available": 0,
+        "num_scooters_unavailable": 0,
+        "eightd_has_available_keys": false
+      }
+    ]
+  },
+  "last_updated": 1788897992,
+  "ttl": 60,
+  "version": "1.1"
+}

@@ -1,0 +1,23 @@
+{
+  "captured_at": "2026-09-08T20:07:13.416190+00:00",
+  "discovery_url": "https://gbfs.citibikenyc.com/gbfs/gbfs.json",
+  "station_ids": [
+    "00284700-9d22-42ce-8485-113fed9879c1",
+    "002e6e9f-ced2-47b0-bc7e-ccf38c3b4b0f",
+    "00967b8f-1a4d-4131-a65a-17fa8ca89e28",
+    "0096fecb-3a56-4585-9204-aa9554f7bc49"
+  ],
+  "description": "Real response envelopes reduced to four station records.",
+  "feeds": {
+    "station_information": {
+      "url": "https://gbfs.lyft.com/gbfs/1.1/bkn/en/station_information.json",
+      "source_record_count": 2507,
+      "sha256": "ab5a7837930555913bd1969af341ec74989d7fb801898741db793aa327dfc8bf"
+    },
+    "station_status": {
+      "url": "https://gbfs.lyft.com/gbfs/1.1/bkn/en/station_status.json",
+      "source_record_count": 2507,
+      "sha256": "4b283c39e52229f50b5802e67486dd19ef1499be3e4ec702dd7ad5767b3aa559"
+    }
+  }
+}

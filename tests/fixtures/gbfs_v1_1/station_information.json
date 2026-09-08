@@ -1,0 +1,101 @@
+{
+  "data": {
+    "stations": [
+      {
+        "station_id": "00284700-9d22-42ce-8485-113fed9879c1",
+        "name": "28 Ave & 44 St",
+        "short_name": "6879.04",
+        "lon": -73.91065120697021,
+        "lat": 40.76408932350688,
+        "region_id": "71",
+        "capacity": 19,
+        "rental_uris": {
+          "android": "https://bkn.lft.to/lastmile_qr_scan",
+          "ios": "https://bkn.lft.to/lastmile_qr_scan"
+        },
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD"
+        ],
+        "has_kiosk": true,
+        "station_type": "classic",
+        "external_id": "00284700-9d22-42ce-8485-113fed9879c1",
+        "electric_bike_surcharge_waiver": false,
+        "eightd_station_services": [],
+        "eightd_has_key_dispenser": false
+      },
+      {
+        "station_id": "002e6e9f-ced2-47b0-bc7e-ccf38c3b4b0f",
+        "name": "Prospect Ave & E 151 St",
+        "short_name": "7830.03",
+        "lon": -73.903927,
+        "lat": 40.814232,
+        "region_id": "71",
+        "capacity": 21,
+        "rental_uris": {
+          "android": "https://bkn.lft.to/lastmile_qr_scan",
+          "ios": "https://bkn.lft.to/lastmile_qr_scan"
+        },
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD"
+        ],
+        "has_kiosk": true,
+        "station_type": "classic",
+        "external_id": "002e6e9f-ced2-47b0-bc7e-ccf38c3b4b0f",
+        "electric_bike_surcharge_waiver": false,
+        "eightd_station_services": [],
+        "eightd_has_key_dispenser": false
+      },
+      {
+        "station_id": "00967b8f-1a4d-4131-a65a-17fa8ca89e28",
+        "name": "41 Ave & 67 St",
+        "short_name": "6225.03",
+        "lon": -73.89764,
+        "lat": 40.74446,
+        "region_id": "71",
+        "capacity": 20,
+        "rental_uris": {
+          "android": "https://bkn.lft.to/lastmile_qr_scan",
+          "ios": "https://bkn.lft.to/lastmile_qr_scan"
+        },
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD"
+        ],
+        "has_kiosk": true,
+        "station_type": "classic",
+        "external_id": "00967b8f-1a4d-4131-a65a-17fa8ca89e28",
+        "electric_bike_surcharge_waiver": false,
+        "eightd_station_services": [],
+        "eightd_has_key_dispenser": false
+      },
+      {
+        "station_id": "0096fecb-3a56-4585-9204-aa9554f7bc49",
+        "name": "E 5 St & Ave A",
+        "short_name": "5626.06",
+        "lon": -73.98430064320564,
+        "lat": 40.72479007746337,
+        "region_id": "71",
+        "capacity": 48,
+        "rental_uris": {
+          "android": "https://bkn.lft.to/lastmile_qr_scan",
+          "ios": "https://bkn.lft.to/lastmile_qr_scan"
+        },
+        "rental_methods": [
+          "KEY",
+          "CREDITCARD"
+        ],
+        "has_kiosk": true,
+        "station_type": "classic",
+        "external_id": "0096fecb-3a56-4585-9204-aa9554f7bc49",
+        "electric_bike_surcharge_waiver": false,
+        "eightd_station_services": [],
+        "eightd_has_key_dispenser": false
+      }
+    ]
+  },
+  "last_updated": 1788897993,
+  "ttl": 60,
+  "version": "1.1"
+}
