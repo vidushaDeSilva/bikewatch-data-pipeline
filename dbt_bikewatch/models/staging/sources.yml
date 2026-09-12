@@ -1,0 +1,91 @@
+version: 2
+
+sources:
+  - name: bikewatch_raw
+    schema: raw
+    description: Validated Citi Bike records loaded by the Python collector.
+
+    tables:
+      - name: station_metadata
+        description: One station per UTC daily bucket; first stored record wins.
+
+        config:
+          loaded_at_field: collected_at
+          freshness:
+            warn_after: {count: 26, period: hour}
+            error_after: {count: 36, period: hour}
+
+        columns: &raw_columns
+          - name: station_id
+            description: Source station identifier, stored as text.
+
+          - name: collection_bucket
+            description: >
+              UTC bucket used with station_id as the storage key;
+              daily for metadata and 15 minutes for observations.
+
+          - name: collected_at
+            description: >
+              Time the collector received the response,
+              before database commit.
+
+          - name: feed_last_updated
+            description: >
+              Upstream envelope last_updated converted to
+              a timezone-aware timestamp.
+
+          - name: source_url
+            description: Feed endpoint from which this record was collected.
+
+          - name: source_version
+            description: GBFS version accepted by ingestion; currently 1.1.
+
+          - name: run_id
+            description: Collector run that first inserted this station-bucket row.
+
+          - name: payload
+            description: >
+              Original selected station record represented as JSONB;
+              not the complete HTTP response.
+
+      - name: station_observation
+        description: >
+          One station per 15-minute UTC bucket;
+          repeated inserts are skipped.
+
+        config:
+          loaded_at_field: collected_at
+          freshness:
+            warn_after: {count: 45, period: minute}
+            error_after: {count: 90, period: minute}
+
+        columns: *raw_columns
+
+  - name: bikewatch_ops
+    schema: ops
+    description: >
+      Collector execution history;
+      recent attempts do not prove fresh observations.
+
+    tables:
+      - name: pipeline_run
+        description: One UUID-identified execution, including failed attempts.
+
+        config:
+          freshness: null
+          # Don not use pipeline_run as a source for freshness checks for bike data.
+
+        columns:
+          - {name: run_id, description: "Unique collector execution identifier."}
+          - {name: status, description: "running, succeeded, partial, or failed."}
+          - {name: stage, description: "Latest processing stage; preserved on failure."}
+          - {name: started_at, description: "UTC execution start time."}
+          - {name: finished_at, description: "UTC completion time; NULL while unfinished."}
+          - {name: collection_bucket, description: "15-minute UTC bucket assigned at run start."}
+          - {name: tracked_station_ids, description: "JSON array of expected station IDs."}
+          - name: metrics
+            description: >
+              Per-feed committed batch counts. Missing feed keys indicate
+              no committed metrics, not zero outcomes.
+          - name: error_type
+            description: Exception class recorded without the exception message.

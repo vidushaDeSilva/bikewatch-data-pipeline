@@ -1,36 +1,30 @@
+name: bikewatch
+version: "1.0.0"
+config-version: 2
 
-# Name your project! Project names should contain only lowercase characters
-# and underscores. A good package name should reflect your organization's
-# name or the intended use of these models
-name: 'bikewatch1'
-version: '1.0.0'
+profile: bikewatch
+require-dbt-version: [">=1.10.5", "<2.0.0"]
 
-# This setting configures which "profile" dbt uses for this project.
-profile: 'bikewatch1'
+model-paths: [models]
+macro-paths: [macros]
 
-# These configurations specify where dbt should look for different types of files.
-# The `model-paths` config, for example, states that models in this project can be
-# found in the "models/" directory. You probably won't need to change these!
-model-paths: ["models"]
-analysis-paths: ["analyses"]
-test-paths: ["tests"]
-seed-paths: ["seeds"]
-macro-paths: ["macros"]
-snapshot-paths: ["snapshots"]
+# tells dbt where to find custom data tests
+test-paths: [tests] 
 
-clean-targets:         # directories to be removed by `dbt clean`
-  - "target"
-  - "dbt_packages"
+clean-targets: [target, dbt_packages]
 
+vars:
+  allowed_clock_skew_seconds: 300
+  station_stale_after_seconds: 2700
 
-# Configuring models
-# Full documentation: https://docs.getdbt.com/docs/configuring-models
-
-# In this example config, we tell dbt to build all models in the example/
-# directory as views. These settings can be overridden in the individual model
-# files using the `{{ config(...) }}` macro.
 models:
-  bikewatch1:
-    # Config indicated by + and applies to all files under models/example/
+  bikewatch:
+    +persist_docs:
+      relation: true
+      columns: true
+
     example:
+      +enabled: false
+
+    staging:
       +materialized: view

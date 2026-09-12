@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: stg_station_metadata
+    description: One metadata source row per station and UTC day, with typed fields and flags.
+    columns:
+      - {name: station_id, description: "Source station identifier, preserved as text.", data_tests: [not_null]}
+      - {name: collection_bucket, description: "UTC daily storage bucket.", data_tests: [not_null]}
+      - {name: collected_at, description: "Response receipt time, before commit.", data_tests: [not_null]}
+      - {name: feed_last_updated, description: "Upstream envelope update timestamp.", data_tests: [not_null]}
+      - {name: source_url, description: "Origin feed endpoint."}
+      - {name: source_version, description: "GBFS response version.", data_tests: [not_null]}
+      - {name: run_id, description: "Collector run that inserted this record.", data_tests: [not_null]}
+      - {name: payload_station_id, description: "Station ID extracted from JSON for identity comparison."}
+      - {name: station_name, description: "Trimmed station name."}
+      - {name: latitude, description: "Latitude in degrees, expected from -90 to 90."}
+      - {name: longitude, description: "Longitude in degrees, expected from -180 to 180."}
+      - {name: capacity, description: "Reported non-negative station capacity."}
+      - {name: has_invalid_structure, description: "Required field, type, range, or identity check failed.", data_tests: [not_null]}
+      - {name: has_time_anomaly, description: "Timestamp order or allowed clock skew check failed.", data_tests: [not_null]}
+
+  - name: stg_station_observation
+    description: One source row per station and 15-minute UTC bucket; no rows filtered.
+    columns:
+      - {name: station_id, description: "Source station identifier, preserved as text.", data_tests: [not_null]}
+      - {name: collection_bucket, description: "15-minute UTC storage bucket.", data_tests: [not_null]}
+      - {name: collected_at, description: "Response receipt time, before commit.", data_tests: [not_null]}
+      - {name: feed_last_updated, description: "Upstream envelope update timestamp.", data_tests: [not_null]}
+      - {name: source_url, description: "Origin feed endpoint."}
+      - {name: source_version, description: "GBFS response version.", data_tests: [not_null]}
+      - {name: run_id, description: "Collector run that inserted this record.", data_tests: [not_null]}
+      - {name: payload_station_id, description: "Station ID extracted from JSON for identity comparison."}
+      - {name: bikes_available, description: "Non-negative available bike count."}
+      - {name: docks_available, description: "Non-negative available dock count."}
+      - {name: bikes_disabled, description: "Optional disabled bike count; missing stays NULL."}
+      - {name: docks_disabled, description: "Optional disabled dock count; missing stays NULL."}
+      - {name: installed_code, description: "Original parsed installed flag: 0 or 1."}
+      - {name: renting_code, description: "Original parsed renting flag: 0 or 1."}
+      - {name: returning_code, description: "Original parsed returning flag: 0 or 1."}
+      - {name: is_installed, description: "Boolean station installation status."}
+      - {name: is_renting, description: "Boolean permission to rent bikes."}
+      - {name: is_returning, description: "Boolean permission to return bikes."}
+      - {name: last_reported_epoch, description: "Parsed reporting epoch; zero is treated as unknown by this project."}
+      - {name: station_reported_at, description: "Station reporting timestamp; NULL for zero or invalid epochs."}
+      - {name: bikes_disabled_provided, description: "Optional bike count was supplied and was not JSON null."}
+      - {name: docks_disabled_provided, description: "Optional dock count was supplied and was not JSON null."}
+      - {name: station_age_seconds, description: "Collection time minus station reporting time, not current age."}
+      - {name: feed_age_seconds, description: "Collection time minus upstream feed update time."}
+      - {name: is_station_time_unknown, description: "Station reporting epoch was zero."}
+      - {name: was_station_stale_at_collection, description: "Station report exceeded the configured age threshold at collection."}
+      - {name: has_invalid_structure, description: "Required field, type, range, or identity check failed.", data_tests: [not_null]}
+      - {name: has_time_anomaly, description: "Timestamp order or allowed clock skew check failed.", data_tests: [not_null]}
+
+  - name: stg_pipeline_run
+    description: One row per execution; absent feed counters remain NULL.
+    columns:
+      - {name: run_id, description: "Unique execution UUID.", data_tests: [not_null, unique]}
+      - {name: run_status, description: "running, succeeded, partial, or failed."}
+      - {name: stage, description: "Latest execution stage."}
+      - {name: started_at, description: "UTC execution start."}
+      - {name: finished_at, description: "UTC completion; NULL while unfinished."}
+      - {name: collection_bucket, description: "15-minute UTC run bucket.", data_tests: [not_null]}
+      - {name: tracked_station_ids, description: "Expected station ID array."}
+      - {name: tracked_station_count, description: "Number of expected station IDs."}
+      - {name: metrics, description: "Original committed per-feed metrics."}
+      - {name: error_type, description: "Exception class only."}
+      - {name: duration_seconds, description: "Completion minus start; NULL for unfinished runs."}
+      - {name: has_invalid_structure, description: "Malformed metrics, invalid counters, or invalid tracked count.", data_tests: [not_null]}
+      - {name: has_count_mismatch, description: "Committed counter equations do not balance."}
+      - {name: has_source_gaps, description: "Committed metrics report missing or rejected records."}
+      - {name: is_failed_run, description: "Run outcome was failed."}
+      - {name: has_time_anomaly, description: "Completion time precedes start.", data_tests: [not_null]}
+
+      - {name: has_station_information_metrics, description: "Committed metadata metrics exist."}
+      - {name: station_information_received, description: "Metadata source entries received; NULL without metrics."}
+      - {name: station_information_ignored, description: "Untracked metadata entries ignored; NULL without metrics."}
+      - {name: station_information_valid, description: "Valid tracked metadata entries; NULL without metrics."}
+      - {name: station_information_accepted, description: "New metadata rows committed; NULL without metrics."}
+      - {name: station_information_duplicate, description: "Existing metadata keys skipped; NULL without metrics."}
+      - {name: station_information_rejected, description: "Rejected metadata entries; NULL without metrics."}
+      - {name: station_information_missing, description: "Expected IDs absent from metadata; NULL without metrics."}
+
+      - {name: has_station_status_metrics, description: "Committed status metrics exist."}
+      - {name: station_status_received, description: "Status source entries received; NULL without metrics."}
+      - {name: station_status_ignored, description: "Untracked status entries ignored; NULL without metrics."}
+      - {name: station_status_valid, description: "Valid tracked status entries; NULL without metrics."}
+      - {name: station_status_accepted, description: "New observations committed; NULL without metrics."}
+      - {name: station_status_duplicate, description: "Existing observation keys skipped; NULL without metrics."}
+      - {name: station_status_rejected, description: "Rejected status entries; NULL without metrics."}
+      - {name: station_status_missing, description: "Expected IDs absent from status; NULL without metrics."}
