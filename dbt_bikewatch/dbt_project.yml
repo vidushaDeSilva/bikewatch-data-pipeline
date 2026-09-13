@@ -11,8 +11,12 @@ macro-paths: [macros]
 # tells dbt where to find custom data tests
 test-paths: [tests] 
 
-clean-targets: [target, dbt_packages]
 
+clean-targets: [target, dbt_packages]
+# target: Contains generated dbt artifacts such as compiled SQL, logs/artifacts, manifests, etc.
+
+
+# vars defines project-level configurable values.
 vars:
   allowed_clock_skew_seconds: 300
   station_stale_after_seconds: 2700
