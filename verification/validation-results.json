@@ -1,0 +1,41 @@
+{
+  "engine": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
+  "gateCount": 43,
+  "behaviorChecks": 20,
+  "checks": [
+    "Metadata joins preserve historical capacity and do not multiply rows",
+    "Hourly sample mean and empty fraction use rental-eligible samples",
+    "Daily means weight samples rather than hourly means",
+    "All-missing hours remain visible with NULL means and zero coverage",
+    "Latest invalid observation falls back visibly to older trusted data",
+    "Missing metadata preserves availability and NULL capacity",
+    "Closed stations remain valid but are outside service denominators",
+    "Unknown, stale station/feed, and future clock records are ineligible",
+    "New York reporting date crosses midnight at the correct UTC instant",
+    "DST days contain 92 or 100 due quarter-hour buckets",
+    "Open bucket and future observations do not create false missing counts",
+    "Disjoint tracking periods do not fill inactive gaps",
+    "No configured tracking schedule produces an empty typed relation",
+    "Gate rejects duplicate fact grains",
+    "Gate rejects future metadata association",
+    "Gate rejects impossible coverage",
+    "Gate detects silently removed samples",
+    "Gate rejects overlapping tracking intervals",
+    "Relationship gate rejects orphan collector runs",
+    "Gate rejects an incorrect daily mean"
+  ],
+  "result": "PASS",
+  "dbt_parse": {
+    "dbt_core": "1.10.15",
+    "dbt_postgres": "1.9.1",
+    "result": "PASS",
+    "scope": "Isolated project with three staging SQL placeholders; no database connection"
+  },
+  "sql_parse": {
+    "models": 8,
+    "tests": 44,
+    "result": "PASS"
+  },
+  "schema_routing": "PASS",
+  "installer_smoke_check": "PASS"
+}

@@ -1,0 +1,19 @@
+# Pass this file using dbt --vars; no edits to dbt_project.yml are required.
+reporting_timezone: America/New_York
+feed_stale_after_seconds: 2700
+
+# Leave empty during manual collection. Coverage is NULL without a schedule.
+# When scheduling starts, replace [] with your real station tracking periods.
+# All boundaries must be explicit UTC and on 15-minute boundaries.
+# start_bucket is inclusive; end_bucket is exclusive; null means still tracked.
+# Disjoint periods per station support removal and later reactivation.
+coverage_tracking_periods: []
+# Example shape only; do not enable fictional station IDs:
+# coverage_tracking_periods:
+#   - station_id: "YOUR_REAL_STATION_ID"
+#     start_bucket: "2026-09-14T00:00:00+00:00"
+#     end_bucket: null
+
+# reporting_as_of defaults to the same dbt run start timestamp for every model.
+# Set explicitly only for a reproducible historical build; include UTC offset.
+# reporting_as_of: "2026-09-15T00:00:00+00:00"

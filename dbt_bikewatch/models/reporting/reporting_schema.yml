@@ -1,0 +1,380 @@
+version: 2
+models:
+- name: int_bw_tracking_periods
+  description: Explicit scheduled tracking intervals; inclusive start and exclusive
+    end. Empty for manual collection.
+  config:
+    persist_docs:
+      relation: true
+      columns: true
+  columns:
+  - name: station_id
+    description: Tracked station ID.
+    data_tests:
+    - not_null
+  - name: start_bucket
+    description: Inclusive UTC start, on a 15-minute boundary.
+    data_tests:
+    - not_null
+  - name: end_bucket
+    description: Exclusive UTC end; NULL means ongoing.
+- name: int_bw_expected_buckets
+  description: One station per completed scheduled 15-minute bucket as of the build
+    cutoff.
+  config:
+    persist_docs:
+      relation: true
+      columns: true
+  columns:
+  - &id001
+    name: station_id
+    description: Source station identifier retained as text.
+    data_tests:
+    - not_null
+  - &id002
+    name: collection_bucket
+    description: UTC 15-minute storage bucket; identifies the sampled interval.
+    data_tests:
+    - not_null
+- name: int_bw_observation_enriched
+  description: Every retained observation received by the build cutoff, with as-of
+    metadata and eligibility; no quality filtering.
+  config:
+    persist_docs:
+      relation: true
+      columns: true
+  columns:
+  - *id001
+  - *id002
+  - name: is_structurally_valid
+    description: Required source structure passed.
+    data_tests:
+    - not_null
+  - name: availability_quality_reason
+    description: First exclusion reason; all original flags remain available.
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - invalid_structure
+          - time_anomaly
+          - unknown_station_time
+          - stale_station_report
+          - stale_feed
+          - eligible
+- name: fct_station_observation
+  description: One structurally valid station observation per 15-minute UTC bucket.
+    Stale and closed rows remain with eligibility flags.
+  config:
+    persist_docs:
+      relation: true
+      columns: true
+  columns:
+  - *id001
+  - *id002
+  - name: run_id
+    description: Collector execution that inserted the observation.
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('stg_pipeline_run')
+          field: run_id
+  - name: collected_at
+    description: Response receipt timestamp before ingestion commit.
+    data_tests:
+    - not_null
+  - name: station_reported_at
+    description: Upstream station reporting time; may be unknown.
+  - name: feed_last_updated
+    description: Upstream feed update time.
+    data_tests:
+    - not_null
+  - name: bikes_available
+    description: Parsed non-negative available bike count.
+    data_tests:
+    - not_null
+  - name: docks_available
+    description: Parsed non-negative available dock count.
+    data_tests:
+    - not_null
+  - name: station_name
+    description: Name from latest valid metadata known by collection time.
+  - name: capacity
+    description: Capacity from applicable historical metadata; NULL without metadata.
+  - name: metadata_collection_bucket
+    description: Storage key of selected metadata snapshot.
+  - name: metadata_collected_at
+    description: When selected metadata became known to this collector.
+  - name: metadata_run_id
+    description: Collector run that inserted the selected metadata.
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('stg_pipeline_run')
+          field: run_id
+  - name: has_metadata
+    description: Whether applicable valid metadata exists.
+    data_tests:
+    - not_null
+  - name: is_availability_eligible
+    description: Valid structure and acceptable feed/station time at collection; includes
+      closed stations.
+    data_tests:
+    - not_null
+  - name: is_rental_eligible
+    description: Availability eligible, installed, and open to rentals.
+    data_tests:
+    - not_null
+  - name: is_return_eligible
+    description: Availability eligible, installed, and open to returns.
+    data_tests:
+    - not_null
+  - name: availability_quality_reason
+    description: First matching quality exclusion or eligible.
+  - name: reporting_as_of
+    description: Shared dbt run cutoff; current age must be evaluated at read time.
+    data_tests:
+    - not_null
+- name: int_bw_reporting_samples
+  description: Union of received observation keys and due scheduled keys; missing
+    observations have NULL measurements.
+  config:
+    persist_docs:
+      relation: true
+      columns: true
+  columns:
+  - *id001
+  - *id002
+  - name: was_received
+    description: A retained observation exists for this key.
+    data_tests:
+    - not_null
+  - name: is_expected
+    description: This is a completed scheduled tracking bucket.
+    data_tests:
+    - not_null
+- name: mart_station_current
+  description: Latest historically trusted observation per observed or actively scheduled
+    station. May be old or closed; freshness is evaluated by the consumer.
+  config:
+    persist_docs:
+      relation: true
+      columns: true
+  columns:
+  - name: station_id
+    description: Observed or actively scheduled station.
+    data_tests:
+    - not_null
+    - unique
+  - name: collection_bucket
+    description: Bucket of selected trusted observation; NULL if none.
+  - name: run_id
+    description: Run that inserted selected observation.
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('stg_pipeline_run')
+          field: run_id
+  - name: has_trusted_observation
+    description: False when no observation ever met availability eligibility.
+    data_tests:
+    - not_null
+  - name: freshness_valid_until
+    description: Earliest expiry of collection, station, and feed age. Compare with
+      current_timestamp at read time.
+  - name: latest_received_bucket
+    description: Newest retained bucket even if unusable.
+  - name: latest_received_at
+    description: Receipt time of newest retained observation.
+  - name: latest_quality_reason
+    description: Quality classification of newest retained observation.
+  - name: using_older_trusted_observation
+    description: A newer unusable observation exists.
+    data_tests:
+    - not_null
+  - name: reporting_as_of
+    description: Build cutoff; the table does not update itself.
+    data_tests:
+    - not_null
+- name: mart_station_hourly
+  description: One station per UTC hour with received or due expected samples.
+  config:
+    persist_docs:
+      relation: true
+      columns: true
+  columns:
+  - name: station_id
+    description: Source station identifier.
+    data_tests:
+    - not_null
+  - name: hour_start_utc
+    description: UTC hour start.
+    data_tests:
+    - not_null
+  - name: expected_observation_count
+    description: Completed scheduled buckets, respecting explicit tracking periods.
+  - name: observation_count
+    description: Retained observations in this period, including invalid or unscheduled
+      samples.
+  - name: scheduled_received_count
+    description: Due scheduled buckets with a retained observation.
+  - name: scheduled_usable_count
+    description: Due scheduled buckets with an availability-eligible observation.
+  - name: missing_observation_count
+    description: Expected minus scheduled received; not interpreted as zero availability.
+  - name: invalid_structure_count
+    description: Received observations excluded from the fact by structural checks.
+  - name: fact_observation_count
+    description: Structurally valid observations retained in the fact.
+  - name: quality_excluded_count
+    description: Fact rows excluded from availability metrics for time/age issues.
+  - name: availability_sample_count
+    description: Fresh, structurally valid samples, including closed operating states.
+  - name: rental_sample_count
+    description: Samples eligible for bike availability; denominator of bike means
+      and empty fraction.
+  - name: return_sample_count
+    description: Samples eligible for dock availability; denominator of dock means
+      and full fraction.
+  - name: not_installed_count
+    description: Availability-eligible samples reporting not installed.
+  - name: rentals_closed_count
+    description: Availability-eligible samples with rental permission false.
+  - name: returns_closed_count
+    description: Availability-eligible samples with return permission false.
+  - name: empty_sample_count
+    description: Rental-eligible samples with zero bikes.
+  - name: full_sample_count
+    description: Return-eligible samples with zero docks.
+  - name: missing_metadata_count
+    description: Received observations lacking valid metadata known at collection
+      time.
+  - name: bikes_sample_sum
+    description: Sum of bikes across rental-eligible samples; not bike trips or unique
+      vehicles.
+  - name: docks_sample_sum
+    description: Sum of docks across return-eligible samples.
+  - name: avg_bikes_available
+    description: Arithmetic mean over rental-eligible samples; NULL if none.
+  - name: min_bikes_available
+    description: Minimum across rental-eligible samples; NULL if none.
+  - name: max_bikes_available
+    description: Maximum across rental-eligible samples; NULL if none.
+  - name: avg_docks_available
+    description: Arithmetic mean over return-eligible samples; NULL if none.
+  - name: min_docks_available
+    description: Minimum across return-eligible samples; NULL if none.
+  - name: max_docks_available
+    description: Maximum across return-eligible samples; NULL if none.
+  - name: collection_coverage
+    description: Scheduled received / expected. NULL without due scheduled buckets.
+  - name: usable_coverage
+    description: Scheduled availability-eligible / expected. NULL without due scheduled
+      buckets.
+  - name: empty_sample_fraction
+    description: Empty rental samples / rental samples. Sample fraction, not exact
+      duration.
+  - name: full_sample_fraction
+    description: Full return samples / return samples. Sample fraction, not exact
+      duration.
+  - name: first_collected_at
+    description: Earliest received observation time for this period.
+  - name: last_collected_at
+    description: Latest received observation time for this period.
+  - name: reporting_as_of
+    description: Shared build cutoff; later missing buckets appear only after another
+      build.
+  - name: reporting_timezone
+    description: Timezone used for reporting dates; UTC hour keys remain UTC.
+- name: mart_station_daily
+  description: One station per local reporting date; direct sample aggregation avoids
+    averaging hourly averages.
+  config:
+    persist_docs:
+      relation: true
+      columns: true
+  columns:
+  - name: station_id
+    description: Source station identifier.
+    data_tests:
+    - not_null
+  - name: reporting_date
+    description: Calendar date in reporting_timezone.
+    data_tests:
+    - not_null
+  - name: expected_observation_count
+    description: Completed scheduled buckets, respecting explicit tracking periods.
+  - name: observation_count
+    description: Retained observations in this period, including invalid or unscheduled
+      samples.
+  - name: scheduled_received_count
+    description: Due scheduled buckets with a retained observation.
+  - name: scheduled_usable_count
+    description: Due scheduled buckets with an availability-eligible observation.
+  - name: missing_observation_count
+    description: Expected minus scheduled received; not interpreted as zero availability.
+  - name: invalid_structure_count
+    description: Received observations excluded from the fact by structural checks.
+  - name: fact_observation_count
+    description: Structurally valid observations retained in the fact.
+  - name: quality_excluded_count
+    description: Fact rows excluded from availability metrics for time/age issues.
+  - name: availability_sample_count
+    description: Fresh, structurally valid samples, including closed operating states.
+  - name: rental_sample_count
+    description: Samples eligible for bike availability; denominator of bike means
+      and empty fraction.
+  - name: return_sample_count
+    description: Samples eligible for dock availability; denominator of dock means
+      and full fraction.
+  - name: not_installed_count
+    description: Availability-eligible samples reporting not installed.
+  - name: rentals_closed_count
+    description: Availability-eligible samples with rental permission false.
+  - name: returns_closed_count
+    description: Availability-eligible samples with return permission false.
+  - name: empty_sample_count
+    description: Rental-eligible samples with zero bikes.
+  - name: full_sample_count
+    description: Return-eligible samples with zero docks.
+  - name: missing_metadata_count
+    description: Received observations lacking valid metadata known at collection
+      time.
+  - name: bikes_sample_sum
+    description: Sum of bikes across rental-eligible samples; not bike trips or unique
+      vehicles.
+  - name: docks_sample_sum
+    description: Sum of docks across return-eligible samples.
+  - name: avg_bikes_available
+    description: Arithmetic mean over rental-eligible samples; NULL if none.
+  - name: min_bikes_available
+    description: Minimum across rental-eligible samples; NULL if none.
+  - name: max_bikes_available
+    description: Maximum across rental-eligible samples; NULL if none.
+  - name: avg_docks_available
+    description: Arithmetic mean over return-eligible samples; NULL if none.
+  - name: min_docks_available
+    description: Minimum across return-eligible samples; NULL if none.
+  - name: max_docks_available
+    description: Maximum across return-eligible samples; NULL if none.
+  - name: collection_coverage
+    description: Scheduled received / expected. NULL without due scheduled buckets.
+  - name: usable_coverage
+    description: Scheduled availability-eligible / expected. NULL without due scheduled
+      buckets.
+  - name: empty_sample_fraction
+    description: Empty rental samples / rental samples. Sample fraction, not exact
+      duration.
+  - name: full_sample_fraction
+    description: Full return samples / return samples. Sample fraction, not exact
+      duration.
+  - name: first_collected_at
+    description: Earliest received observation time for this period.
+  - name: last_collected_at
+    description: Latest received observation time for this period.
+  - name: reporting_as_of
+    description: Shared build cutoff; later missing buckets appear only after another
+      build.
+  - name: reporting_timezone
+    description: Timezone used for reporting dates; UTC hour keys remain UTC.
