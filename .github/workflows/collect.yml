@@ -33,7 +33,7 @@ jobs:
       PYTHONPATH: src:scripts
       PYTHONUNBUFFERED: "1"
 
-      # PostgreSQL applies these to new libpq connections.
+      # Retained for the connection diagnostic.
       PGOPTIONS: "-c statement_timeout=120000 -c lock_timeout=15000"
 
     steps:
@@ -92,7 +92,7 @@ jobs:
           print(f"Validated {len(tracked)} tracked stations.")
           PY
 
-            - name: Diagnose ingestion database connection
+      - name: Diagnose ingestion database connection
         timeout-minutes: 2
         env:
           BIKEWATCH_DATABASE_URL: ${{ secrets.BIKEWATCH_DATABASE_URL }}
@@ -117,68 +117,7 @@ jobs:
                   ) as db:
                       db.execute("SELECT 1").fetchone()
               except psycopg.Error as exc:
-                  # Inspect internally; never print the raw exception or DSN.
-                  message = str(exc).lower()
-
-                  if "unsupported startup parameter" in message:
-                      reason = "unsupported startup parameter"
-                  elif "password authentication failed" in message:
-                      reason = "password authentication failed"
-                  elif "could not translate host name" in message:
-                      reason = "hostname resolution failed"
-                  elif "timeout" in message or "timed out" in message:
-                      reason = "connection or query timed out"
-                  elif "ssl" in message or "certificate" in message:
-                      reason = "SSL or certificate error"
-                  elif "connection refused" in message:
-                      reason = "connection refused"
-                  else:
-                      reason = "unclassified database error"
-
-                  print(f"{label}: FAIL — {reason}", flush=True)
-                  return False
-
-              print(f"{label}: PASS", flush=True)
-              return True
-
-          if probe("Current workflow settings"):
-              raise SystemExit(0)
-
-          if probe("Without startup options", options=""):
-              raise SystemExit(
-                  "Connection succeeded without startup options. "
-                  "Check PGOPTIONS and any options in the connection URL."
-              )
-
-          raise SystemExit("Both connection checks failed.")
-          PY
-          
-        - name: Diagnose ingestion database connection
-        timeout-minutes: 2
-        env:
-          BIKEWATCH_DATABASE_URL: ${{ secrets.BIKEWATCH_DATABASE_URL }}
-        run: |
-          python - <<'PY'
-          import os
-
-          import psycopg
-
-          dsn = os.environ.get("BIKEWATCH_DATABASE_URL", "")
-
-          if not dsn.strip():
-              raise SystemExit("BIKEWATCH_DATABASE_URL is missing or empty.")
-
-          def probe(label, **kwargs):
-              try:
-                  with psycopg.connect(
-                      dsn,
-                      autocommit=True,
-                      connect_timeout=15,
-                      **kwargs,
-                  ) as db:
-                      db.execute("SELECT 1").fetchone()
-              except psycopg.Error as exc:
-                  # Inspect internally; never print the raw exception or DSN.
+                  # Never print the raw exception or connection string.
                   message = str(exc).lower()
 
                   if "unsupported startup parameter" in message:
