@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 #    ↓
 # StationInformation or StationStatus
 
+
 class SourceModel(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -31,12 +32,8 @@ class StationStatus(SourceModel):
     station_id: str = Field(min_length=1)
     num_bikes_available: int = Field(ge=0, strict=True)
     num_docks_available: int = Field(ge=0, strict=True)
-    num_bikes_disabled: int | None = Field(
-        default=None, ge=0, strict=True
-    )
-    num_docks_disabled: int | None = Field(
-        default=None, ge=0, strict=True
-    )
+    num_bikes_disabled: int | None = Field(default=None, ge=0, strict=True)
+    num_docks_disabled: int | None = Field(default=None, ge=0, strict=True)
     is_installed: int = Field(ge=0, le=1, strict=True)
     is_renting: int = Field(ge=0, le=1, strict=True)
     is_returning: int = Field(ge=0, le=1, strict=True)

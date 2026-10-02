@@ -20,7 +20,7 @@ def fetch_json(client, url):
 
     for attempt in range(max_attempts):
         status_code = None
-        delay = 2 ** attempt
+        delay = 2**attempt
 
         try:
             response = client.get(url)
@@ -29,10 +29,7 @@ def fetch_json(client, url):
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
 
-            if (
-                status_code not in RETRYABLE_STATUS_CODES
-                or attempt == max_attempts - 1
-            ):
+            if status_code not in RETRYABLE_STATUS_CODES or attempt == max_attempts - 1:
                 raise
 
             retry_after = exc.response.headers.get("Retry-After")
@@ -71,14 +68,19 @@ def fetch_json(client, url):
             )
 
         # Only controlled diagnostic fields enter the log.
-        print(json.dumps({
-            "event": "http_retry",
-            "attempt_failed": attempt + 1,
-            "next_attempt": attempt + 2,
-            "delay_seconds": delay,
-            "http_status": status_code,
-            "error_type": error_type,
-        }), flush=True)
+        print(
+            json.dumps(
+                {
+                    "event": "http_retry",
+                    "attempt_failed": attempt + 1,
+                    "next_attempt": attempt + 2,
+                    "delay_seconds": delay,
+                    "http_status": status_code,
+                    "error_type": error_type,
+                }
+            ),
+            flush=True,
+        )
 
         time.sleep(delay)
 

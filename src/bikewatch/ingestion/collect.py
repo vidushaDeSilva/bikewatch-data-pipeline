@@ -46,9 +46,7 @@ def load_station_ids():
         or any(not isinstance(value, str) or not value for value in values)
         or len(set(values)) != len(values)
     ):
-        raise ValueError(
-            "Configure 1–20 distinct, non-empty station ID strings"
-        )
+        raise ValueError("Configure 1–20 distinct, non-empty station ID strings")
 
     return set(values)
 
@@ -109,17 +107,11 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
     # Valid rows, rejected rows, and feed metrics commit together.
     with db.transaction():
         for record in records:
-            station_id = (
-                record.get("station_id")
-                if isinstance(record, dict)
-                else None
-            )
+            station_id = record.get("station_id") if isinstance(record, dict) else None
 
             if not isinstance(station_id, str) or not station_id:
                 counts["rejected"] += 1
-                quarantine(
-                    db, run_id, feed_name, "missing_station_id", record
-                )
+                quarantine(db, run_id, feed_name, "missing_station_id", record)
                 continue
 
             if station_id not in tracked:
@@ -128,9 +120,7 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
 
             if station_id in seen:
                 counts["rejected"] += 1
-                quarantine(
-                    db, run_id, feed_name, "repeated_station_id", record
-                )
+                quarantine(db, run_id, feed_name, "repeated_station_id", record)
                 continue
 
             seen.add(station_id)
@@ -176,19 +166,13 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
         counts["missing"] = len(tracked - seen)
 
         # Every valid record is either newly inserted or already stored.
-        if counts["valid"] != (
-            counts["accepted"] + counts["duplicate"]
-        ):
+        if counts["valid"] != (counts["accepted"] + counts["duplicate"]):
             raise RuntimeError("Invalid valid-record accounting")
 
         # Every source entry must have exactly one processing outcome.
         # Missing stations are absent from the response, so they are
         # deliberately excluded from this equation.
-        if counts["received"] != (
-            counts["ignored"]
-            + counts["rejected"]
-            + counts["valid"]
-        ):
+        if counts["received"] != (counts["ignored"] + counts["rejected"] + counts["valid"]):
             raise RuntimeError("Invalid source-record accounting")
 
         db.execute(
@@ -202,14 +186,19 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
 
     # The transaction has successfully committed before this log.
     # If loading or committing raises an exception, this is skipped.
-    print(json.dumps({
-        "event": "batch_committed",
-        "logged_at": now_utc().isoformat(),
-        "run_id": str(run_id),
-        "feed": feed_name,
-        "collection_bucket": bucket.isoformat(),
-        "counts": counts,
-    }), flush=True)
+    print(
+        json.dumps(
+            {
+                "event": "batch_committed",
+                "logged_at": now_utc().isoformat(),
+                "run_id": str(run_id),
+                "feed": feed_name,
+                "collection_bucket": bucket.isoformat(),
+                "counts": counts,
+            }
+        ),
+        flush=True,
+    )
 
     return counts
 
@@ -217,9 +206,7 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
 def initialize_stations(client, discovery_url):
     """One-time configuration utility, not a collection run."""
     if STATIONS_FILE.exists():
-        raise ValueError(
-            "Station configuration already exists; inspect it before changing it"
-        )
+        raise ValueError("Station configuration already exists; inspect it before changing it")
 
     feeds = discover(client, discovery_url)
     payload = fetch_json(client, feeds["station_information"])
@@ -245,8 +232,7 @@ def initialize_stations(client, discovery_url):
     selected = sorted(
         candidates.values(),
         key=lambda station: (
-            (station.lat - 40.7580) ** 2
-            + ((station.lon + 73.9855) * 0.76) ** 2,
+            (station.lat - 40.7580) ** 2 + ((station.lon + 73.9855) * 0.76) ** 2,
             station.station_id,
         ),
     )[:20]
@@ -277,9 +263,7 @@ def collect(client, discovery_url):
         second=0,
         microsecond=0,
     )
-    metadata_bucket = started_at.replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
+    metadata_bucket = started_at.replace(hour=0, minute=0, second=0, microsecond=0)
 
     # Autocommit persists the run and stage markers independently.
     # Explicit transactions below protect each data batch.
@@ -320,7 +304,9 @@ def collect(client, discovery_url):
             if not tracked.issubset(existing):
                 set_stage(db, run_id, "collecting_metadata")
                 metadata_counts = load_feed(
-                    db, client, run_id,
+                    db,
+                    client,
+                    run_id,
                     "station_information",
                     feeds["station_information"],
                     metadata_bucket,
@@ -329,7 +315,9 @@ def collect(client, discovery_url):
 
             set_stage(db, run_id, "collecting_status")
             status_counts = load_feed(
-                db, client, run_id,
+                db,
+                client,
+                run_id,
                 "station_status",
                 feeds["station_status"],
                 bucket,
@@ -342,10 +330,7 @@ def collect(client, discovery_url):
 
             if status_counts["valid"] == 0:
                 outcome = "failed"
-            elif any(
-                summary["rejected"] or summary["missing"]
-                for summary in summaries
-            ):
+            elif any(summary["rejected"] or summary["missing"] for summary in summaries):
                 outcome = "partial"
             else:
                 outcome = "succeeded"
@@ -359,12 +344,17 @@ def collect(client, discovery_url):
                 (outcome, now_utc(), run_id),
             )
 
-            print(json.dumps({
-                "run_id": str(run_id),
-                "status": outcome,
-                "metadata": metadata_counts or "already available today",
-                "station_status": status_counts,
-            }, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "run_id": str(run_id),
+                        "status": outcome,
+                        "metadata": metadata_counts or "already available today",
+                        "station_status": status_counts,
+                    },
+                    indent=2,
+                )
+            )
 
             return 0 if outcome == "succeeded" else 1
 
