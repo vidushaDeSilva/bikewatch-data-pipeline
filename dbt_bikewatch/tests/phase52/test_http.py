@@ -4,7 +4,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
 from src.bikewatch.ingestion import gbfs
 from src.bikewatch.ingestion.models import (
     StationEnvelope,
@@ -66,11 +65,7 @@ def test_retry_policy(
             text = "{" if item == "bad_json" else "NaN"
             return httpx.Response(200, text=text)
 
-        headers = (
-            {}
-            if header is None
-            else {"Retry-After": header}
-        )
+        headers = {} if header is None else {"Retry-After": header}
 
         return httpx.Response(
             item,
@@ -78,9 +73,7 @@ def test_retry_policy(
             headers=headers,
         )
 
-    with httpx.Client(
-        transport=httpx.MockTransport(handler)
-    ) as client:
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         url = f"https://fixture.test/feed?token={secret}"
 
         if error is None:
@@ -97,14 +90,9 @@ def test_retry_policy(
 
 
 def test_saved_source_contract(source_feeds):
-    folder = (
-        Path(__file__).resolve().parents[2]
-        / "tests/fixtures/gbfs_v1_1"
-    )
+    folder = Path(__file__).resolve().parents[2] / "tests/fixtures/gbfs_v1_1"
 
-    manifest = json.loads(
-        (folder / "manifest.json").read_text(encoding="utf-8")
-    )
+    manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
 
     expected_ids = set(manifest["station_ids"])
     assert len(expected_ids) == 4
@@ -115,19 +103,11 @@ def test_saved_source_contract(source_feeds):
     ):
         raw = (folder / f"{name}.json").read_bytes()
 
-        assert (
-            hashlib.sha256(raw).hexdigest()
-            == manifest["feeds"][name]["sha256"]
-        )
+        assert hashlib.sha256(raw).hexdigest() == manifest["feeds"][name]["sha256"]
 
-        envelope = StationEnvelope.model_validate(
-            source_feeds[name]
-        )
+        envelope = StationEnvelope.model_validate(source_feeds[name])
 
-        rows = [
-            model.model_validate(row)
-            for row in envelope.data.stations
-        ]
+        rows = [model.model_validate(row) for row in envelope.data.stations]
 
         assert len(rows) == 4
         assert {row.station_id for row in rows} == expected_ids

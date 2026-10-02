@@ -1,9 +1,8 @@
 import json
-from pathlib import Path
 import sys
 import tempfile
 import unittest
-
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -14,12 +13,13 @@ sys.path.insert(
 
 from scripts.publish_reporting import (
     MODELS,
-    PublicationBlocked,
     REQUIRED_MODELS,
     REQUIRED_TESTS,
+    PublicationBlocked,
     check_build_artifacts,
     check_freshness_artifact,
 )
+
 
 class GateTests(unittest.TestCase):
     def setUp(self):
@@ -36,11 +36,7 @@ class GateTests(unittest.TestCase):
                 "name": name,
                 "resource_type": "model",
                 "config": {"enabled": True},
-                "schema": (
-                    "bw_candidate_analytics"
-                    if name in MODELS
-                    else "bw_candidate"
-                ),
+                "schema": ("bw_candidate_analytics" if name in MODELS else "bw_candidate"),
             }
 
             self.results.append(
@@ -51,10 +47,7 @@ class GateTests(unittest.TestCase):
             )
 
         names = list(REQUIRED_TESTS) + [
-            f"generic_test_{number}"
-            for number in range(
-                69 - len(REQUIRED_TESTS)
-            )
+            f"generic_test_{number}" for number in range(69 - len(REQUIRED_TESTS))
         ]
 
         warning_tests = {
@@ -65,11 +58,7 @@ class GateTests(unittest.TestCase):
         for name in names:
             uid = "test.bikewatch." + name
 
-            severity = (
-                "warn"
-                if name in warning_tests
-                else "error"
-            )
+            severity = "warn" if name in warning_tests else "error"
 
             self.nodes[uid] = {
                 "name": name,
@@ -92,26 +81,14 @@ class GateTests(unittest.TestCase):
         self.directory.cleanup()
 
     def validate(self):
-        (
-            self.path / "manifest.json"
-        ).write_text(
-            json.dumps({"nodes": self.nodes})
-        )
+        (self.path / "manifest.json").write_text(json.dumps({"nodes": self.nodes}))
 
-        (
-            self.path / "run_results.json"
-        ).write_text(
-            json.dumps({"results": self.results})
-        )
+        (self.path / "run_results.json").write_text(json.dumps({"results": self.results}))
 
         return check_build_artifacts(self.path)
 
     def result(self, name):
-        return next(
-            result
-            for result in self.results
-            if result["unique_id"].endswith("." + name)
-        )
+        return next(result for result in self.results if result["unique_id"].endswith("." + name))
 
     def test_complete_build_accepted(self):
         self.assertEqual(
@@ -127,25 +104,19 @@ class GateTests(unittest.TestCase):
 
     def test_critical_fail_error_skip_block(self):
         for status in ["fail", "error", "skipped"]:
-            self.result(
-                "reporting_fact_integrity"
-            )["status"] = status
+            self.result("reporting_fact_integrity")["status"] = status
 
             with self.assertRaises(PublicationBlocked):
                 self.validate()
 
     def test_weakened_critical_severity_blocks(self):
-        self.nodes[
-            "test.bikewatch.reporting_fact_integrity"
-        ]["config"]["severity"] = "warn"
+        self.nodes["test.bikewatch.reporting_fact_integrity"]["config"]["severity"] = "warn"
 
         with self.assertRaises(PublicationBlocked):
             self.validate()
 
     def test_noncritical_warning_allowed(self):
-        self.result(
-            "reporting_quality_warnings"
-        ).update(
+        self.result("reporting_quality_warnings").update(
             status="warn",
             failures=20,
         )
@@ -156,17 +127,13 @@ class GateTests(unittest.TestCase):
         )
 
     def test_wrong_schema_blocks(self):
-        self.nodes[
-            "model.bikewatch.mart_station_current"
-        ]["schema"] = "analytics"
+        self.nodes["model.bikewatch.mart_station_current"]["schema"] = "analytics"
 
         with self.assertRaises(PublicationBlocked):
             self.validate()
 
     def test_missing_required_gate_blocks(self):
-        del self.nodes[
-            "test.bikewatch.reporting_coverage_expectations"
-        ]
+        del self.nodes["test.bikewatch.reporting_coverage_expectations"]
 
         with self.assertRaises(PublicationBlocked):
             self.validate()
@@ -174,10 +141,7 @@ class GateTests(unittest.TestCase):
     def test_freshness_statuses(self):
         results = [
             {
-                "unique_id": (
-                    "source.bikewatch.bikewatch_raw."
-                    + name
-                ),
+                "unique_id": ("source.bikewatch.bikewatch_raw." + name),
                 "status": "pass",
             }
             for name in [
@@ -188,9 +152,7 @@ class GateTests(unittest.TestCase):
 
         path = self.path / "sources.json"
 
-        path.write_text(
-            json.dumps({"results": results})
-        )
+        path.write_text(json.dumps({"results": results}))
 
         self.assertEqual(
             len(check_freshness_artifact(path)),
@@ -199,9 +161,7 @@ class GateTests(unittest.TestCase):
 
         results[0]["status"] = "error"
 
-        path.write_text(
-            json.dumps({"results": results})
-        )
+        path.write_text(json.dumps({"results": results}))
 
         with self.assertRaises(PublicationBlocked):
             check_freshness_artifact(path)
@@ -230,10 +190,10 @@ if __name__ == "__main__":
 # critical problem    → PublicationBlocked
 # warning-only issue  → allowed
 
-# setUp() — creates a temporary fake dbt build environment containing all required models and tests in a valid state. 
+# setUp() — creates a temporary fake dbt build environment containing all required models and tests in a valid state.
 # This gives each test a clean baseline.
 # tearDown() — removes the temporary test directory after each unit test.
-# validate() — writes fake manifest.json and run_results.json files, 
+# validate() — writes fake manifest.json and run_results.json files,
 # then calls check_build_artifacts() to see whether the simulated dbt build should be accepted.
 # result(name) — finds a specific test result from the fake results list so an individual test can change its status.
 
@@ -241,12 +201,12 @@ if __name__ == "__main__":
 # test_missing_test_result_blocks() — confirms publication is blocked if an enabled model/test has no corresponding result.
 # test_critical_fail_error_skip_block() — confirms a critical test blocks publication when its status is fail, error, or skipped.
 # test_weakened_critical_severity_blocks() — confirms a critical test cannot be changed from error severity to warn.
-# test_noncritical_warning_allowed() — confirms designated warning tests are allowed to return warnings without blocking 
+# test_noncritical_warning_allowed() — confirms designated warning tests are allowed to return warnings without blocking
 # publication.
-# test_wrong_schema_blocks() — confirms reporting models must be built in the isolated candidate schemas, 
+# test_wrong_schema_blocks() — confirms reporting models must be built in the isolated candidate schemas,
 # not directly in analytics.
 # test_missing_required_gate_blocks() — confirms publication is blocked if one of the mandatory validation tests is missing.
-# test_freshness_statuses() — confirms source freshness passes when both required sources return acceptable statuses, 
+# test_freshness_statuses() — confirms source freshness passes when both required sources return acceptable statuses,
 # and blocks if one returns an error.
-# test_missing_freshness_result_blocks() — confirms publication is blocked if the source-freshness artifact contains no 
+# test_missing_freshness_result_blocks() — confirms publication is blocked if the source-freshness artifact contains no
 # expected source results.

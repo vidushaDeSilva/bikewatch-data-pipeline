@@ -5,16 +5,14 @@ The caller owns the transaction and publication lock.
 
 from psycopg import sql
 from psycopg.types.json import Jsonb
-
+from retention import prune_reporting_versions
 
 MODELS = {
     "fct_station_observation": (
         "station_id",
         "collection_bucket",
     ),
-    "mart_station_current": (
-        "station_id",
-    ),
+    "mart_station_current": ("station_id",),
     "mart_station_hourly": (
         "station_id",
         "hour_start_utc",
@@ -54,9 +52,7 @@ def published_fingerprints(connection):
                 FROM {} t
                 """
             ).format(
-                sql.SQL(", ").join(
-                    map(sql.Identifier, key)
-                ),
+                sql.SQL(", ").join(map(sql.Identifier, key)),
                 sql.Identifier("analytics", model),
             )
         ).fetchone()
@@ -121,9 +117,7 @@ def publish_candidate(connection, run_id, cutoff, summary):
         ).fetchone()
 
         if kind != ("r",):
-            raise PublicationBlocked(
-                f"Candidate {model} must be a built table."
-            )
+            raise PublicationBlocked(f"Candidate {model} must be a built table.")
 
         candidate_columns = columns(
             connection,
@@ -137,13 +131,9 @@ def publish_candidate(connection, run_id, cutoff, summary):
             model,
         )
 
-        if (
-            public_columns
-            and public_columns != candidate_columns
-        ):
+        if public_columns and public_columns != candidate_columns:
             raise PublicationBlocked(
-                f"Column contract changed for {model}; "
-                "use an explicit migration."
+                f"Column contract changed for {model}; use an explicit migration."
             )
 
         snapshot = f"v_{token}_{model}"
@@ -154,29 +144,21 @@ def publish_candidate(connection, run_id, cutoff, summary):
         )
 
         connection.execute(
-            sql.SQL(
-                "CREATE TABLE {} AS SELECT * FROM {}"
-            ).format(
+            sql.SQL("CREATE TABLE {} AS SELECT * FROM {}").format(
                 target,
                 sql.Identifier(CANDIDATE_SCHEMA, model),
             )
         )
 
         connection.execute(
-            sql.SQL(
-                "ALTER TABLE {} ADD PRIMARY KEY ({})"
-            ).format(
+            sql.SQL("ALTER TABLE {} ADD PRIMARY KEY ({})").format(
                 target,
-                sql.SQL(", ").join(
-                    map(sql.Identifier, key)
-                ),
+                sql.SQL(", ").join(map(sql.Identifier, key)),
             )
         )
 
         row_counts[model] = connection.execute(
-            sql.SQL(
-                "SELECT count(*) FROM {}"
-            ).format(target)
+            sql.SQL("SELECT count(*) FROM {}").format(target)
         ).fetchone()[0]
 
         mismatch = connection.execute(
@@ -191,13 +173,9 @@ def publish_candidate(connection, run_id, cutoff, summary):
         ).fetchone()[0]
 
         if mismatch:
-            raise PublicationBlocked(
-                f"Build-cutoff mismatch in {model}."
-            )
+            raise PublicationBlocked(f"Build-cutoff mismatch in {model}.")
 
-        relations[model] = (
-            f"reporting_versions.{snapshot}"
-        )
+        relations[model] = f"reporting_versions.{snapshot}"
 
     for model in MODELS:
         kind = connection.execute(
@@ -222,27 +200,20 @@ def publish_candidate(connection, run_id, cutoff, summary):
             legacy = f"legacy_{token}_{model}"
 
             connection.execute(
-                sql.SQL(
-                    "ALTER TABLE {} RENAME TO {}"
-                ).format(
+                sql.SQL("ALTER TABLE {} RENAME TO {}").format(
                     public,
                     sql.Identifier(legacy),
                 )
             )
 
             connection.execute(
-                sql.SQL(
-                    "ALTER TABLE {} "
-                    "SET SCHEMA reporting_versions"
-                ).format(
+                sql.SQL("ALTER TABLE {} SET SCHEMA reporting_versions").format(
                     sql.Identifier("analytics", legacy)
                 )
             )
 
         elif kind is not None and kind != ("v",):
-            raise PublicationBlocked(
-                f"Unexpected public relation type for {model}."
-            )
+            raise PublicationBlocked(f"Unexpected public relation type for {model}.")
 
         snapshot = f"v_{token}_{model}"
 
@@ -256,10 +227,7 @@ def publish_candidate(connection, run_id, cutoff, summary):
         )
 
         connection.execute(
-            sql.SQL(
-                "CREATE OR REPLACE VIEW {} "
-                "AS SELECT {} FROM {}"
-            ).format(
+            sql.SQL("CREATE OR REPLACE VIEW {} AS SELECT {} FROM {}").format(
                 public,
                 names,
                 sql.Identifier(
@@ -269,24 +237,12 @@ def publish_candidate(connection, run_id, cutoff, summary):
             )
         )
 
-        connection.execute(
-            sql.SQL(
-                "REVOKE ALL ON {} FROM PUBLIC"
-            ).format(public)
-        )
+        connection.execute(sql.SQL("REVOKE ALL ON {} FROM PUBLIC").format(public))
 
-        connection.execute(
-            sql.SQL(
-                "REVOKE ALL ON {} FROM bikewatch_dashboard"
-            ).format(public)
-        )
+        connection.execute(sql.SQL("REVOKE ALL ON {} FROM bikewatch_dashboard").format(public))
 
         if model.startswith("mart_"):
-            connection.execute(
-                sql.SQL(
-                    "GRANT SELECT ON {} TO bikewatch_dashboard"
-                ).format(public)
-            )
+            connection.execute(sql.SQL("GRANT SELECT ON {} TO bikewatch_dashboard").format(public))
 
     summary = dict(
         summary,
@@ -309,9 +265,7 @@ def publish_candidate(connection, run_id, cutoff, summary):
     ).rowcount
 
     if updated != 1:
-        raise PublicationBlocked(
-            "Publication attempt is no longer in running status."
-        )
+        raise PublicationBlocked("Publication attempt is no longer in running status.")
 
     connection.execute(
         """
@@ -345,7 +299,10 @@ def publish_candidate(connection, run_id, cutoff, summary):
         ),
     )
 
+    prune_reporting_versions(connection, keep=3)
+
     return summary
+
 
 #         dbt candidate build
 #                 │

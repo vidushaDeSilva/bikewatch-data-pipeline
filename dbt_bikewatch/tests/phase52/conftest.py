@@ -6,9 +6,7 @@ import httpx
 import psycopg
 import pytest
 from psycopg import sql
-
 from src.bikewatch.ingestion import collect as collector
-
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests/fixtures/gbfs_v1_1"
@@ -28,9 +26,7 @@ def test_dsn(role):
 @pytest.fixture(autouse=True)
 def no_live_http(monkeypatch):
     def blocked(*args, **kwargs):
-        raise AssertionError(
-            "Tests must use MockTransport, not live HTTP"
-        )
+        raise AssertionError("Tests must use MockTransport, not live HTTP")
 
     monkeypatch.setattr(
         httpx.HTTPTransport,
@@ -42,9 +38,7 @@ def no_live_http(monkeypatch):
 @pytest.fixture
 def source_feeds():
     return {
-        name: json.loads(
-            (FIXTURES / f"{name}.json").read_text(encoding="utf-8")
-        )
+        name: json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
         for name in ("station_information", "station_status")
     }
 
@@ -55,9 +49,7 @@ def database_ready():
         test_dsn("bikewatch_test_admin"),
         autocommit=True,
     ) as db:
-        identity = db.execute(
-            "SELECT current_database(), current_user"
-        ).fetchone()
+        identity = db.execute("SELECT current_database(), current_user").fetchone()
 
         assert identity == (
             "bikewatch_test",
@@ -72,9 +64,7 @@ def database_ready():
 
             if not exists:
                 db.execute(
-                    sql.SQL(
-                        "CREATE ROLE {} LOGIN PASSWORD {}"
-                    ).format(
+                    sql.SQL("CREATE ROLE {} LOGIN PASSWORD {}").format(
                         sql.Identifier(role),
                         sql.Literal(PASSWORD),
                     )
@@ -129,10 +119,7 @@ def database(database_ready):
 
 @pytest.fixture
 def run_collector(database, source_feeds, monkeypatch):
-    tracked = {
-        row["station_id"]
-        for row in source_feeds["station_status"]["data"]["stations"]
-    }
+    tracked = {row["station_id"] for row in source_feeds["station_status"]["data"]["stations"]}
 
     monkeypatch.setenv(
         "BIKEWATCH_DATABASE_URL",
@@ -178,9 +165,7 @@ def run_collector(database, source_feeds, monkeypatch):
 
             return httpx.Response(200, json=payload)
 
-        with httpx.Client(
-            transport=httpx.MockTransport(handler)
-        ) as client:
+        with httpx.Client(transport=httpx.MockTransport(handler)) as client:
             exit_code = collector.collect(
                 client,
                 "https://fixture.test/gbfs",

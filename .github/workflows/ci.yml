@@ -1,0 +1,134 @@
+name: BikeWatch CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bikewatch-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: bikewatch_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_only
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bikewatch_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      APP_ENV: ci
+      PYTHONPATH: src:scripts
+      PYTHONUNBUFFERED: "1"
+
+      TEST_DATABASE_URL: postgresql://postgres:ci_only@127.0.0.1:5433/bikewatch_test?sslmode=disable
+      DATABASE_URL: postgresql://bikewatch_ingest:ci_only@127.0.0.1:5433/bikewatch_test?sslmode=disable
+      BIKEWATCH_DATABASE_URL: postgresql://bikewatch_ingest:ci_only@127.0.0.1:5433/bikewatch_test?sslmode=disable
+
+      DBT_HOST: 127.0.0.1
+      DBT_PORT: "5433"
+      DBT_DBNAME: bikewatch_test
+      DBT_ENV_SECRET_PASSWORD: ci_only
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-ci.lock
+
+      - name: Install dependencies
+        timeout-minutes: 3
+        run: |
+          python -m pip install -r requirements-ci.lock
+          python -m pip check
+
+      - name: Lint and check formatting
+        timeout-minutes: 2
+        run: |
+          ruff check --config ruff-ci.toml src scripts tests dbt_bikewatch/tests
+          ruff format --config ruff-ci.toml --check src scripts tests dbt_bikewatch/tests
+
+      - name: Prepare disposable database
+        timeout-minutes: 2
+        run: python scripts/ci_database.py
+
+      - name: Run Python and ingestion tests
+        timeout-minutes: 5
+        run: |
+          mkdir -p artifacts
+
+          python -m pytest tests dbt_bikewatch/tests \
+            -o addopts='' \
+            --junitxml=artifacts/python-tests.xml
+
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("artifacts/python-tests.xml").getroot()
+          cases = list(root.iter("testcase"))
+
+          skipped = []
+          for case in cases:
+              item = case.find("skipped")
+              if item is not None:
+                  skipped.append(
+                      f"{case.get('name')}: {item.get('message', '')}"
+                  )
+
+          if skipped:
+              raise SystemExit(
+                  "CI must not silently skip tests:\n"
+                  + "\n".join(skipped)
+              )
+
+          if len(cases) < 23:
+              raise SystemExit(
+                  "Expected at least 20 publication tests "
+                  "and 3 new ingestion integration tests."
+              )
+
+          print(f"PASS: {len(cases)} Python tests executed without skips.")
+          PY
+
+      - name: Build and test isolated dbt models
+        timeout-minutes: 7
+        run: python scripts/ci_dbt.py
+
+      - name: Save test reports
+        if: ${{ always() }}
+        timeout-minutes: 1
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/python-tests.xml
+            artifacts/ci-dbt/target/manifest.json
+            artifacts/ci-dbt/target/run_results.json
+            artifacts/ci-dbt/target/sources.json
+            artifacts/ci-dbt/logs/dbt.log
+          retention-days: 7
+          if-no-files-found: ignore

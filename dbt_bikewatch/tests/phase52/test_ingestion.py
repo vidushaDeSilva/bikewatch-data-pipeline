@@ -4,7 +4,6 @@ import json
 import httpx
 import psycopg
 import pytest
-
 from src.bikewatch.ingestion import collect as collector
 
 
@@ -55,15 +54,13 @@ def test_commit_and_same_bucket_retry(
     # Today's complete metadata is reused.
     assert calls == ["gbfs", "station_status"]
 
-    observation_count = database.execute(
-        "SELECT count(*) FROM raw.station_observation"
-    ).fetchone()[0]
+    observation_count = database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[
+        0
+    ]
 
     assert observation_count == 4
 
-    runs = database.execute(
-        "SELECT status, metrics FROM ops.pipeline_run"
-    ).fetchall()
+    runs = database.execute("SELECT status, metrics FROM ops.pipeline_run").fetchall()
 
     assert len(runs) == 2
     assert all(status == "succeeded" for status, _ in runs)
@@ -107,13 +104,9 @@ def test_mixed_records(
         "missing": 1,
     }
 
-    assert database.execute(
-        "SELECT count(*) FROM raw.station_observation"
-    ).fetchone()[0] == 2
+    assert database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0] == 2
 
-    reason, payload = database.execute(
-        "SELECT reason, payload FROM ops.rejected_record"
-    ).fetchone()
+    reason, payload = database.execute("SELECT reason, payload FROM ops.rejected_record").fetchone()
 
     assert "num_bikes_available" in reason
     assert payload["num_bikes_available"] == -1
@@ -139,9 +132,7 @@ def test_repeated_source_id(
         counts["duplicate"],
     ) == (4, 1, 0)
 
-    reason = database.execute(
-        "SELECT reason FROM ops.rejected_record"
-    ).fetchone()[0]
+    reason = database.execute("SELECT reason FROM ops.rejected_record").fetchone()[0]
 
     assert reason == "repeated_station_id"
 
@@ -151,7 +142,6 @@ def test_repeated_source_id(
     [
         # Invalid envelope.
         {"version": "1.1", "data": {}},
-
         # Structurally valid envelope with no station records.
         {
             "version": "1.1",
@@ -169,9 +159,7 @@ def test_unusable_status_fails(
     assert run_collector(status)[0] == 1
     assert run_record(database)[0] == "failed"
 
-    assert database.execute(
-        "SELECT count(*) FROM raw.station_observation"
-    ).fetchone()[0] == 0
+    assert database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0] == 0
 
 
 def test_database_failure_rolls_back_batch(
@@ -244,17 +232,11 @@ def test_database_failure_rolls_back_batch(
     # The earlier independent metadata batch remains committed.
     assert metrics["station_information"]["accepted"] == 4
 
-    assert database.execute(
-        "SELECT count(*) FROM raw.station_observation"
-    ).fetchone()[0] == 0
+    assert database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0] == 0
 
-    assert database.execute(
-        "SELECT count(*) FROM ops.rejected_record"
-    ).fetchone()[0] == 0
+    assert database.execute("SELECT count(*) FROM ops.rejected_record").fetchone()[0] == 0
 
-    assert database.execute(
-        "SELECT count(*) FROM raw.station_metadata"
-    ).fetchone()[0] == 4
+    assert database.execute("SELECT count(*) FROM raw.station_metadata").fetchone()[0] == 4
 
     output = capsys.readouterr().out
 
@@ -271,9 +253,7 @@ def test_failure_logs_hide_exception_details(
     secret = "DO_NOT_LOG_THIS_TEST_SECRET"
 
     def fail(*args):
-        raise httpx.ConnectError(
-            f"postgresql://someone:{secret}@example.invalid/db"
-        )
+        raise httpx.ConnectError(f"postgresql://someone:{secret}@example.invalid/db")
 
     monkeypatch.setattr(collector, "discover", fail)
 
@@ -349,13 +329,9 @@ def test_role_permissions(database, run_collector):
         sslmode="disable",
         connect_timeout=5,
     ) as db:
-        assert db.execute(
-            "SELECT count(*) FROM raw.station_observation"
-        ).fetchone()[0] == 4
+        assert db.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0] == 4
 
-        with pytest.raises(
-            psycopg.errors.InsufficientPrivilege
-        ):
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
             db.execute(
                 """
                 UPDATE raw.station_observation

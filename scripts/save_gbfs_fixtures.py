@@ -15,7 +15,6 @@ from bikewatch.ingestion.models import (
     StationStatus,
 )
 
-
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "tests/fixtures/gbfs_v1_1"
 
@@ -27,9 +26,7 @@ MODELS = {
 
 def main():
     if OUTPUT.exists():
-        raise SystemExit(
-            "Fixtures already exist; keep them for repeatable tests."
-        )
+        raise SystemExit("Fixtures already exist; keep them for repeatable tests.")
 
     discovery_url = os.getenv(
         "GBFS_DISCOVERY_URL",
@@ -56,23 +53,16 @@ def main():
                 indexed[name].setdefault(station.station_id, record)
 
     # Use the same four real stations in both saved responses.
-    selected = sorted(
-        set(indexed["station_information"])
-        & set(indexed["station_status"])
-    )[:4]
+    selected = sorted(set(indexed["station_information"]) & set(indexed["station_status"]))[:4]
 
     if len(selected) != 4:
-        raise SystemExit(
-            "Need four valid stations present in both feeds."
-        )
+        raise SystemExit("Need four valid stations present in both feeds.")
 
     manifest = {
         "captured_at": datetime.now(UTC).isoformat(),
         "discovery_url": discovery_url,
         "station_ids": selected,
-        "description": (
-            "Real response envelopes reduced to four station records."
-        ),
+        "description": ("Real response envelopes reduced to four station records."),
         "feeds": {},
     }
 
@@ -82,14 +72,9 @@ def main():
         sample = copy.deepcopy(payloads[name])
         source_count = len(sample["data"]["stations"])
 
-        sample["data"]["stations"] = [
-            indexed[name][station_id]
-            for station_id in selected
-        ]
+        sample["data"]["stations"] = [indexed[name][station_id] for station_id in selected]
 
-        data = (
-            json.dumps(sample, indent=2, allow_nan=False) + "\n"
-        ).encode("utf-8")
+        data = (json.dumps(sample, indent=2, allow_nan=False) + "\n").encode("utf-8")
 
         (OUTPUT / f"{name}.json").write_bytes(data)
 
