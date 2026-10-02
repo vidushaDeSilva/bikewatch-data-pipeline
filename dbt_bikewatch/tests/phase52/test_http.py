@@ -4,8 +4,9 @@ from pathlib import Path
 
 import httpx
 import pytest
-from src.bikewatch.ingestion import gbfs
-from src.bikewatch.ingestion.models import (
+
+from bikewatch.ingestion import gbfs
+from bikewatch.ingestion.models import (
     StationEnvelope,
     StationInformation,
     StationStatus,
@@ -90,7 +91,7 @@ def test_retry_policy(
 
 
 def test_saved_source_contract(source_feeds):
-    folder = Path(__file__).resolve().parents[2] / "tests/fixtures/gbfs_v1_1"
+    folder = Path(__file__).resolve().parents[1] / "gbfs_v1_1"
 
     manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
 

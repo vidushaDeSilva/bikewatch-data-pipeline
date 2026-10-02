@@ -4,7 +4,9 @@ import json
 import httpx
 import psycopg
 import pytest
-from src.bikewatch.ingestion import collect as collector
+from ci_database import ci_port
+
+from bikewatch.ingestion import collect as collector
 
 
 def run_record(db):
@@ -318,13 +320,14 @@ def test_role_permissions(database, run_collector):
         assert actual == expected, (role, table, actual)
 
     # Use a real restricted login, not SET ROLE from an owner.
+    # Use a real restricted login, not SET ROLE from an owner.
     with psycopg.connect(
         host="127.0.0.1",
         hostaddr="127.0.0.1",
-        port=55432,
+        port=ci_port(),
         dbname="bikewatch_test",
         user="bikewatch_transform",
-        password="bikewatch_test_only",
+        password="ci_only",
         autocommit=True,
         sslmode="disable",
         connect_timeout=5,

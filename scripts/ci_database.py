@@ -18,6 +18,7 @@ def ci_port():
 
     return port
 
+
 def connect_ci():
     dsn = os.environ["TEST_DATABASE_URL"]
     info = conninfo_to_dict(dsn)
@@ -29,10 +30,7 @@ def connect_ci():
         or info.get("port") != str(port)
         or info.get("dbname") != "bikewatch_test"
     ):
-        raise RuntimeError(
-            f"CI requires APP_ENV=ci and "
-            f"127.0.0.1:{port}/bikewatch_test."
-        )
+        raise RuntimeError(f"CI requires APP_ENV=ci and 127.0.0.1:{port}/bikewatch_test.")
 
     return psycopg.connect(
         dsn,

@@ -37,6 +37,7 @@ jobs:
       APP_ENV: ci
       PYTHONPATH: src:scripts
       PYTHONUNBUFFERED: "1"
+      CI_DB_PORT: "5433"
 
       TEST_DATABASE_URL: postgresql://postgres:ci_only@127.0.0.1:5433/bikewatch_test?sslmode=disable
       DATABASE_URL: postgresql://bikewatch_ingest:ci_only@127.0.0.1:5433/bikewatch_test?sslmode=disable

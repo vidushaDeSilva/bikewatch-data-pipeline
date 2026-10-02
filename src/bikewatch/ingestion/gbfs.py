@@ -4,7 +4,6 @@ import time
 import httpx
 from pydantic import HttpUrl, TypeAdapter
 
-
 URL = TypeAdapter(HttpUrl)
 
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}

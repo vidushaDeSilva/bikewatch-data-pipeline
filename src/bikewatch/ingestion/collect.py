@@ -19,7 +19,6 @@ from bikewatch.ingestion.models import (
     StationStatus,
 )
 
-
 STATIONS_FILE = Path("config/tracked_stations.json")
 
 FEED_MODELS = {

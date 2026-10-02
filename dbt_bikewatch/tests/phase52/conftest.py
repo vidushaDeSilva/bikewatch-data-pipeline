@@ -1,24 +1,45 @@
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
-import psycopg
 import pytest
+from ci_database import ci_port, connect_ci
 from psycopg import sql
-from src.bikewatch.ingestion import collect as collector
 
-ROOT = Path(__file__).resolve().parents[2]
-FIXTURES = ROOT / "tests/fixtures/gbfs_v1_1"
+from bikewatch.ingestion import collect as collector
 
-# Public, disposable test credential
-PASSWORD = "bikewatch_test_only"
+ROOT = Path(__file__).resolve().parents[3]
+FIXTURES = ROOT / "dbt_bikewatch/tests/gbfs_v1_1"
+
+# Public credential for the disposable CI database only.
+PASSWORD = "ci_only"
 
 
 def test_dsn(role):
+    if os.getenv("APP_ENV") != "ci":
+        raise RuntimeError("These database tests require APP_ENV=ci.")
+
+    # Keep compatibility with older tests requesting this admin name.
+    if role == "bikewatch_test_admin":
+        role = "postgres"
+
+    allowed_roles = {
+        "postgres",
+        "bikewatch_ingest",
+        "bikewatch_transform",
+        "bikewatch_dashboard",
+    }
+
+    if role not in allowed_roles:
+        raise ValueError(f"Unexpected test role: {role}")
+
     return (
-        "host=127.0.0.1 hostaddr=127.0.0.1 port=55432 "
-        f"dbname=bikewatch_test user={role} password={PASSWORD} "
+        "host=127.0.0.1 hostaddr=127.0.0.1 "
+        f"port={ci_port()} "
+        f"dbname=bikewatch_test user={role} "
+        f"password={PASSWORD} "
         "connect_timeout=5 sslmode=disable"
     )
 
@@ -39,43 +60,60 @@ def no_live_http(monkeypatch):
 def source_feeds():
     return {
         name: json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
-        for name in ("station_information", "station_status")
+        for name in (
+            "station_information",
+            "station_status",
+        )
     }
 
 
 @pytest.fixture(scope="session")
 def database_ready():
-    with psycopg.connect(
-        test_dsn("bikewatch_test_admin"),
-        autocommit=True,
-    ) as db:
+    # connect_ci checks APP_ENV, host, port, and database name
+    # before allowing access to the disposable database.
+    with connect_ci() as db:
         identity = db.execute("SELECT current_database(), current_user").fetchone()
 
-        assert identity == (
-            "bikewatch_test",
-            "bikewatch_test_admin",
-        )
+        if identity != ("bikewatch_test", "postgres"):
+            raise RuntimeError(
+                "Expected the disposable bikewatch_test database "
+                "with the postgres test administrator."
+            )
 
-        for role in ("bikewatch_ingest", "bikewatch_transform"):
+        # Read migrations before changing any database objects.
+        migrations = [
+            (ROOT / "sql" / "migrations" / filename).read_text(encoding="utf-8")
+            for filename in (
+                "003_ingestion_tables.sql",
+                "004_ingestion_permissions.sql",
+            )
+        ]
+
+        for role in (
+            "bikewatch_ingest",
+            "bikewatch_transform",
+        ):
             exists = db.execute(
                 "SELECT 1 FROM pg_roles WHERE rolname = %s",
                 (role,),
             ).fetchone()
 
             if not exists:
-                db.execute(
-                    sql.SQL("CREATE ROLE {} LOGIN PASSWORD {}").format(
-                        sql.Identifier(role),
-                        sql.Literal(PASSWORD),
-                    )
-                )
+                db.execute(sql.SQL("CREATE ROLE {} LOGIN").format(sql.Identifier(role)))
 
-        # Reset only this disposable database's test schemas.
+            db.execute(
+                sql.SQL("ALTER ROLE {} LOGIN PASSWORD {}").format(
+                    sql.Identifier(role),
+                    sql.Literal(PASSWORD),
+                )
+            )
+
+        # Reset only schemas in the guarded disposable database.
         db.execute("DROP SCHEMA IF EXISTS raw, ops CASCADE")
         db.execute("CREATE SCHEMA raw; CREATE SCHEMA ops")
 
-        # Reproduce earlier broad defaults so migration 004
-        # must remove the permissions inherited by new tables.
+        # Reproduce the broad defaults that migration 004
+        # must remove. This preserves the permission tests.
         for schema in ("raw", "ops"):
             db.execute(
                 sql.SQL(
@@ -87,22 +125,14 @@ def database_ready():
                 ).format(sql.Identifier(schema))
             )
 
-        # Apply the actual project migrations.
-        for filename in (
-            "003_ingestion_tables.sql",
-            "004_ingestion_permissions.sql",
-        ):
-            migration = ROOT / "sql/migrations" / filename
-            db.execute(migration.read_text(encoding="utf-8"))
+        # Test the actual ingestion migrations.
+        for migration in migrations:
+            db.execute(migration)
 
 
 @pytest.fixture
 def database(database_ready):
-    with psycopg.connect(
-        test_dsn("bikewatch_test_admin"),
-        autocommit=True,
-    ) as db:
-        # Every database test starts with empty tables.
+    with connect_ci() as db:
         db.execute(
             """
             TRUNCATE
@@ -151,7 +181,7 @@ def run_collector(database, source_feeds, monkeypatch):
                             "feeds": [
                                 {
                                     "name": feed,
-                                    "url": f"https://fixture.test/{feed}",
+                                    "url": (f"https://fixture.test/{feed}"),
                                 }
                                 for feed in source_feeds
                             ]
