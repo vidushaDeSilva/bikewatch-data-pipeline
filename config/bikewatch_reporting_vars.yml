@@ -1,19 +1,86 @@
-# Pass this file using dbt --vars; no edits to dbt_project.yml are required.
 reporting_timezone: America/New_York
 feed_stale_after_seconds: 2700
 
-# Leave empty during manual collection. Coverage is NULL without a schedule.
-# When scheduling starts, replace [] with your real station tracking periods.
-# All boundaries must be explicit UTC and on 15-minute boundaries.
-# start_bucket is inclusive; end_bucket is exclusive; null means still tracked.
-# Disjoint periods per station support removal and later reactivation.
-coverage_tracking_periods: []
-# Example shape only; do not enable fictional station IDs:
-# coverage_tracking_periods:
-#   - station_id: "YOUR_REAL_STATION_ID"
-#     start_bucket: "2026-09-14T00:00:00+00:00"
-#     end_bucket: null
+# Coverage begins at the scheduled collection start.
+# Station IDs must remain quoted strings.
+# null means the station remains tracked indefinitely.
+coverage_tracking_periods:
+  - station_id: "053312f2-e77e-4674-b28b-ad357fbcb4ee"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
 
-# reporting_as_of defaults to the same dbt run start timestamp for every model.
-# Set explicitly only for a reproducible historical build; include UTC offset.
-# reporting_as_of: "2026-09-15T00:00:00+00:00"
+  - station_id: "0fde06c2-632c-46a9-8866-f4e855604f74"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "2004153375425087884"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "2104286315955915532"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "2227531312359792274"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "2c366f4b-8319-41bf-ab8e-2fba3a952feb"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "490ca6cc-c2a2-4838-acf0-4704ed60dc51"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "64f0f28c-bedc-42d5-b107-ecdd48fc30cd"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "66dc1e55-0aca-11e7-82f6-3863bb44ef7c"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "66dc292c-0aca-11e7-82f6-3863bb44ef7c"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "66dc3f08-0aca-11e7-82f6-3863bb44ef7c"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "66dc48ef-0aca-11e7-82f6-3863bb44ef7c"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "66dc7b10-0aca-11e7-82f6-3863bb44ef7c"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "66dc82ef-0aca-11e7-82f6-3863bb44ef7c"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "66dc85bb-0aca-11e7-82f6-3863bb44ef7c"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "66dca682-0aca-11e7-82f6-3863bb44ef7c"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "66de8a86-0aca-11e7-82f6-3863bb44ef7c"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "904930bd-2671-4695-9c1a-8a894b041129"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "d29ea280-8b64-4a35-b12b-245525ae2a3a"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
+
+  - station_id: "f72a253f-3cef-4da8-9591-0cbd3a692162"
+    start_bucket: "2026-10-03T08:00:00Z"
+    end_bucket: null
