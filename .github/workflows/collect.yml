@@ -33,9 +33,6 @@ jobs:
       PYTHONPATH: src:scripts
       PYTHONUNBUFFERED: "1"
 
-      # Retained for the connection diagnostic.
-      PGOPTIONS: "-c statement_timeout=120000 -c lock_timeout=15000"
-
     steps:
       - name: Check out production branch
         uses: actions/checkout@v7
