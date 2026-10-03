@@ -162,6 +162,30 @@ jobs:
           DBT_ENV_SECRET_PASSWORD: ${{ secrets.DBT_ENV_SECRET_PASSWORD }}
         run: python scripts/publish_reporting.py
 
+      # Cleanup starts only after reporting publication succeeds.
+      - name: Daily snapshot cleanup
+        timeout-minutes: 2
+        env:
+          DBT_HOST: ${{ vars.DBT_HOST }}
+          DBT_PORT: ${{ vars.DBT_PORT || '5432' }}
+          DBT_DBNAME: ${{ vars.DBT_DBNAME || 'bikewatch' }}
+          DBT_ENV_SECRET_PASSWORD: ${{ secrets.DBT_ENV_SECRET_PASSWORD }}
+        run: python scripts/maintenance.py cleanup --apply
+
+      - name: Save diagnostics after failure
+        if: ${{ failure() }}
+        timeout-minutes: 1
+        uses: actions/upload-artifact@v7
+        with:
+          name: pipeline-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          include-hidden-files: true
+          path: |
+            .bikewatch-publication/*/target/run_results.json
+            .bikewatch-publication/*/target/sources.json
+            .bikewatch-publication/*/reporting_vars.json
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Save diagnostics after failure
         if: ${{ failure() }}
         timeout-minutes: 1
