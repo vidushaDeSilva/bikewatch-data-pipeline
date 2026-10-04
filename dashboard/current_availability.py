@@ -44,9 +44,7 @@ def read_published_snapshot():
         connect_timeout=10,
     ) as db:
         with db.transaction():
-            db.execute(
-                "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"
-            )
+            db.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
 
             stations = db.execute(
                 """
@@ -93,11 +91,7 @@ def is_fresh(row, now):
     """Check expiry when the page renders, including cached database rows."""
     expires = row["freshness_valid_until"]
 
-    return (
-        row["has_trusted_observation"]
-        and expires is not None
-        and expires > now
-    )
+    return row["has_trusted_observation"] and expires is not None and expires > now
 
 
 def station_status(row, now):
@@ -157,8 +151,7 @@ def show_current_availability():
         stations, health = read_published_snapshot()
     except (KeyError, ValueError, FileNotFoundError, psycopg.Error) as error:
         st.error(
-            "Unable to read the published dashboard data "
-            f"({type(error).__name__})."
+            f"Unable to read the published dashboard data ({type(error).__name__})."
         )
         return
 
@@ -217,20 +210,14 @@ def show_current_availability():
         "for the corresponding service. Missing readings are not zero."
     )
 
-    statuses = sorted(
-        {station_status(row, now) for row in stations}
-    )
+    statuses = sorted({station_status(row, now) for row in stations})
     selected = st.multiselect(
         "Show station statuses",
         options=statuses,
         default=statuses,
     )
 
-    visible = [
-        row
-        for row in stations
-        if station_status(row, now) in selected
-    ]
+    visible = [row for row in stations if station_status(row, now) in selected]
 
     colors = {
         "Open": "#1F9D55",
@@ -252,8 +239,7 @@ def show_current_availability():
             "color": colors[station_status(row, now)],
         }
         for row in visible
-        if row["latitude"] is not None
-        and row["longitude"] is not None
+        if row["latitude"] is not None and row["longitude"] is not None
     ]
 
     st.subheader("Station map")
@@ -285,33 +271,24 @@ def show_current_availability():
             {
                 "Station": row["station_name"] or row["station_id"],
                 "Status": station_status(row, now),
-                "Bikes observed": (
-                    row["bikes_available"] if fresh_reading else None
-                ),
-                "Docks observed": (
-                    row["docks_available"] if fresh_reading else None
-                ),
+                "Bikes observed": (row["bikes_available"] if fresh_reading else None),
+                "Docks observed": (row["docks_available"] if fresh_reading else None),
                 "Rentals open": (
                     bool(row["is_installed"] and row["is_renting"])
-                    if fresh_reading else None
+                    if fresh_reading
+                    else None
                 ),
                 "Returns open": (
                     bool(row["is_installed"] and row["is_returning"])
-                    if fresh_reading else None
+                    if fresh_reading
+                    else None
                 ),
                 "Station age (minutes)": (
-                    reported_age_minutes(row, now)
-                    if fresh_reading else None
+                    reported_age_minutes(row, now) if fresh_reading else None
                 ),
-                "Station reported": display_time(
-                    row["station_reported_at"]
-                ),
-                "Latest received": display_time(
-                    row["latest_received_at"]
-                ),
-                "Latest quality reason": (
-                    row["latest_quality_reason"] or "—"
-                ),
+                "Station reported": display_time(row["station_reported_at"]),
+                "Latest received": display_time(row["latest_received_at"]),
+                "Latest quality reason": (row["latest_quality_reason"] or "—"),
                 "Station ID": row["station_id"],
             }
         )
@@ -324,8 +301,7 @@ def show_current_availability():
     )
 
     fallback_count = sum(
-        bool(row["using_older_trusted_observation"])
-        for row in stations
+        bool(row["using_older_trusted_observation"]) for row in stations
     )
 
     if fallback_count:

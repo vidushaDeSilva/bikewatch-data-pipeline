@@ -53,7 +53,9 @@ def main():
                 indexed[name].setdefault(station.station_id, record)
 
     # Use the same four real stations in both saved responses.
-    selected = sorted(set(indexed["station_information"]) & set(indexed["station_status"]))[:4]
+    selected = sorted(
+        set(indexed["station_information"]) & set(indexed["station_status"])
+    )[:4]
 
     if len(selected) != 4:
         raise SystemExit("Need four valid stations present in both feeds.")
@@ -72,7 +74,9 @@ def main():
         sample = copy.deepcopy(payloads[name])
         source_count = len(sample["data"]["stations"])
 
-        sample["data"]["stations"] = [indexed[name][station_id] for station_id in selected]
+        sample["data"]["stations"] = [
+            indexed[name][station_id] for station_id in selected
+        ]
 
         data = (json.dumps(sample, indent=2, allow_nan=False) + "\n").encode("utf-8")
 

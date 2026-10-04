@@ -30,7 +30,9 @@ def connect_ci():
         or info.get("port") != str(port)
         or info.get("dbname") != "bikewatch_test"
     ):
-        raise RuntimeError(f"CI requires APP_ENV=ci and 127.0.0.1:{port}/bikewatch_test.")
+        raise RuntimeError(
+            f"CI requires APP_ENV=ci and 127.0.0.1:{port}/bikewatch_test."
+        )
 
     return psycopg.connect(
         dsn,
@@ -54,7 +56,9 @@ def reset_database():
             if not exists:
                 db.execute(sql.SQL("CREATE ROLE {} LOGIN").format(sql.Identifier(role)))
 
-            db.execute(sql.SQL("ALTER ROLE {} PASSWORD 'ci_only'").format(sql.Identifier(role)))
+            db.execute(
+                sql.SQL("ALTER ROLE {} PASSWORD 'ci_only'").format(sql.Identifier(role))
+            )
 
         db.execute(
             """

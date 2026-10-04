@@ -10,12 +10,16 @@ import yaml
 
 def utc_boundary(value):
     if not isinstance(value, str):
-        raise ValueError("Tracking timestamps must be quoted ISO strings with a UTC offset.")
+        raise ValueError(
+            "Tracking timestamps must be quoted ISO strings with a UTC offset."
+        )
 
     stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
 
     if stamp.utcoffset() != timedelta(0):
-        raise ValueError("Tracking timestamps must use an explicit UTC offset: Z or +00:00.")
+        raise ValueError(
+            "Tracking timestamps must use an explicit UTC offset: Z or +00:00."
+        )
 
     if stamp.minute % 15 or stamp.second or stamp.microsecond:
         raise ValueError("Tracking boundaries must align to 15-minute UTC buckets.")
@@ -50,7 +54,9 @@ def load_reporting_config(path):
     unknown = set(config) - allowed
 
     if unknown:
-        raise ValueError("Unknown reporting configuration keys: " + ", ".join(sorted(unknown)))
+        raise ValueError(
+            "Unknown reporting configuration keys: " + ", ".join(sorted(unknown))
+        )
 
     ZoneInfo(
         config.get(
@@ -81,12 +87,22 @@ def load_reporting_config(path):
 
         station = period.get("station_id")
 
-        if not isinstance(station, str) or not station.strip() or station != station.strip():
-            raise ValueError("station_id must be a nonempty quoted string without outer spaces.")
+        if (
+            not isinstance(station, str)
+            or not station.strip()
+            or station != station.strip()
+        ):
+            raise ValueError(
+                "station_id must be a nonempty quoted string without outer spaces."
+            )
 
         start = utc_boundary(period.get("start_bucket"))
 
-        end = utc_boundary(period["end_bucket"]) if period.get("end_bucket") is not None else None
+        end = (
+            utc_boundary(period["end_bucket"])
+            if period.get("end_bucket") is not None
+            else None
+        )
 
         if end is not None and end <= start:
             raise ValueError("Tracking end must be after start.")
@@ -101,7 +117,9 @@ def load_reporting_config(path):
             intervals[1:],
         ):
             if end is None or next_start < end:
-                raise ValueError("Tracking intervals for the same station must not overlap.")
+                raise ValueError(
+                    "Tracking intervals for the same station must not overlap."
+                )
 
     return config
 
@@ -115,7 +133,9 @@ if __name__ == "__main__":
         json.dumps(
             {
                 "valid": True,
-                "tracking_period_count": len(config.get("coverage_tracking_periods", [])),
+                "tracking_period_count": len(
+                    config.get("coverage_tracking_periods", [])
+                ),
                 "coverage_mode": (
                     "scheduled" if config.get("coverage_tracking_periods") else "manual"
                 ),

@@ -71,8 +71,7 @@ def github_schedule_results(path, start, end):
     selected = [
         run
         for run in runs
-        if run.get("event") == "schedule"
-        and start <= utc_time(run["createdAt"]) < end
+        if run.get("event") == "schedule" and start <= utc_time(run["createdAt"]) < end
     ]
 
     successful = sum(run.get("conclusion") == "success" for run in selected)
@@ -220,8 +219,8 @@ def main():
     buckets = [start + index * BUCKET for index in range(evaluated_count)]
 
     station_count = tracked_station_count()
-    collection, publication, coverage, cleanup, database_bytes = (
-        database_results(start, evaluated_end)
+    collection, publication, coverage, cleanup, database_bytes = database_results(
+        start, evaluated_end
     )
 
     missing_collection = [
@@ -245,9 +244,7 @@ def main():
 
     dates = [start.date() + timedelta(days=offset) for offset in range(DAYS)]
     cleanup_failures = [
-        day.isoformat()
-        for day in dates
-        if cleanup.get(day) != "succeeded"
+        day.isoformat() for day in dates if cleanup.get(day) != "succeeded"
     ]
 
     github = github_schedule_results(args.github_runs, start, end)
@@ -265,8 +262,7 @@ def main():
             and github["other_scheduled_runs"] == 0
         ),
         "neon_usage_measured_and_within_limits": (
-            neon["measured"]
-            and neon["within_supplied_limits"]
+            neon["measured"] and neon["within_supplied_limits"]
         ),
     }
 
@@ -287,9 +283,7 @@ def main():
                 "evaluated_buckets": evaluated_count,
                 "tracked_stations": station_count,
                 "checks": checks,
-                "missing_or_unsuccessful_collection_count": len(
-                    missing_collection
-                ),
+                "missing_or_unsuccessful_collection_count": len(missing_collection),
                 "collection_examples": missing_collection[:12],
                 "missing_publication_count": len(missing_publication),
                 "publication_examples": missing_publication[:12],

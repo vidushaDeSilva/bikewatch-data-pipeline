@@ -56,9 +56,9 @@ def test_commit_and_same_bucket_retry(
     # Today's complete metadata is reused.
     assert calls == ["gbfs", "station_status"]
 
-    observation_count = database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[
-        0
-    ]
+    observation_count = database.execute(
+        "SELECT count(*) FROM raw.station_observation"
+    ).fetchone()[0]
 
     assert observation_count == 4
 
@@ -106,9 +106,14 @@ def test_mixed_records(
         "missing": 1,
     }
 
-    assert database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0] == 2
+    assert (
+        database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0]
+        == 2
+    )
 
-    reason, payload = database.execute("SELECT reason, payload FROM ops.rejected_record").fetchone()
+    reason, payload = database.execute(
+        "SELECT reason, payload FROM ops.rejected_record"
+    ).fetchone()
 
     assert "num_bikes_available" in reason
     assert payload["num_bikes_available"] == -1
@@ -161,7 +166,10 @@ def test_unusable_status_fails(
     assert run_collector(status)[0] == 1
     assert run_record(database)[0] == "failed"
 
-    assert database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0] == 0
+    assert (
+        database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0]
+        == 0
+    )
 
 
 def test_database_failure_rolls_back_batch(
@@ -234,11 +242,18 @@ def test_database_failure_rolls_back_batch(
     # The earlier independent metadata batch remains committed.
     assert metrics["station_information"]["accepted"] == 4
 
-    assert database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0] == 0
+    assert (
+        database.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0]
+        == 0
+    )
 
-    assert database.execute("SELECT count(*) FROM ops.rejected_record").fetchone()[0] == 0
+    assert (
+        database.execute("SELECT count(*) FROM ops.rejected_record").fetchone()[0] == 0
+    )
 
-    assert database.execute("SELECT count(*) FROM raw.station_metadata").fetchone()[0] == 4
+    assert (
+        database.execute("SELECT count(*) FROM raw.station_metadata").fetchone()[0] == 4
+    )
 
     output = capsys.readouterr().out
 
@@ -332,7 +347,10 @@ def test_role_permissions(database, run_collector):
         sslmode="disable",
         connect_timeout=5,
     ) as db:
-        assert db.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0] == 4
+        assert (
+            db.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0]
+            == 4
+        )
 
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             db.execute(

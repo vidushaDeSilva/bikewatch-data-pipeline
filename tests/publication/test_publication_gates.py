@@ -36,7 +36,9 @@ class GateTests(unittest.TestCase):
                 "name": name,
                 "resource_type": "model",
                 "config": {"enabled": True},
-                "schema": ("bw_candidate_analytics" if name in MODELS else "bw_candidate"),
+                "schema": (
+                    "bw_candidate_analytics" if name in MODELS else "bw_candidate"
+                ),
             }
 
             self.results.append(
@@ -83,12 +85,18 @@ class GateTests(unittest.TestCase):
     def validate(self):
         (self.path / "manifest.json").write_text(json.dumps({"nodes": self.nodes}))
 
-        (self.path / "run_results.json").write_text(json.dumps({"results": self.results}))
+        (self.path / "run_results.json").write_text(
+            json.dumps({"results": self.results})
+        )
 
         return check_build_artifacts(self.path)
 
     def result(self, name):
-        return next(result for result in self.results if result["unique_id"].endswith("." + name))
+        return next(
+            result
+            for result in self.results
+            if result["unique_id"].endswith("." + name)
+        )
 
     def test_complete_build_accepted(self):
         self.assertEqual(
@@ -110,7 +118,9 @@ class GateTests(unittest.TestCase):
                 self.validate()
 
     def test_weakened_critical_severity_blocks(self):
-        self.nodes["test.bikewatch.reporting_fact_integrity"]["config"]["severity"] = "warn"
+        self.nodes["test.bikewatch.reporting_fact_integrity"]["config"]["severity"] = (
+            "warn"
+        )
 
         with self.assertRaises(PublicationBlocked):
             self.validate()

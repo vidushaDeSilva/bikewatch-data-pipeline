@@ -171,7 +171,9 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
         # Every source entry must have exactly one processing outcome.
         # Missing stations are absent from the response, so they are
         # deliberately excluded from this equation.
-        if counts["received"] != (counts["ignored"] + counts["rejected"] + counts["valid"]):
+        if counts["received"] != (
+            counts["ignored"] + counts["rejected"] + counts["valid"]
+        ):
             raise RuntimeError("Invalid source-record accounting")
 
         db.execute(
@@ -205,7 +207,9 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
 def initialize_stations(client, discovery_url):
     """One-time configuration utility, not a collection run."""
     if STATIONS_FILE.exists():
-        raise ValueError("Station configuration already exists; inspect it before changing it")
+        raise ValueError(
+            "Station configuration already exists; inspect it before changing it"
+        )
 
     feeds = discover(client, discovery_url)
     payload = fetch_json(client, feeds["station_information"])
@@ -329,7 +333,9 @@ def collect(client, discovery_url):
 
             if status_counts["valid"] == 0:
                 outcome = "failed"
-            elif any(summary["rejected"] or summary["missing"] for summary in summaries):
+            elif any(
+                summary["rejected"] or summary["missing"] for summary in summaries
+            ):
                 outcome = "partial"
             else:
                 outcome = "succeeded"

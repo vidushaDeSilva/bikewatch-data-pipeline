@@ -64,7 +64,11 @@ def prune_reporting_versions(connection, keep=3):
     for (name,) in tables:
         match = pattern.fullmatch(name)
 
-        if match and match[1] not in retained and f"reporting_versions.{name}" not in protected:
+        if (
+            match
+            and match[1] not in retained
+            and f"reporting_versions.{name}" not in protected
+        ):
             connection.execute(
                 sql.SQL("DROP TABLE {} RESTRICT").format(
                     sql.Identifier(
