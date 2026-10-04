@@ -93,17 +93,9 @@ class CoverageTests(unittest.TestCase):
         ]
 
         for start, end, expected in cases:
-            a = (
-                datetime.fromisoformat(start)
-                .replace(tzinfo=zone)
-                .astimezone(timezone.utc)
-            )
+            a = datetime.fromisoformat(start).replace(tzinfo=zone).astimezone(timezone.utc)
 
-            b = (
-                datetime.fromisoformat(end)
-                .replace(tzinfo=zone)
-                .astimezone(timezone.utc)
-            )
+            b = datetime.fromisoformat(end).replace(tzinfo=zone).astimezone(timezone.utc)
 
             self.assertEqual(
                 expected_count(a, b, b),

@@ -3,6 +3,7 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+
 import jinja2
 import yaml
 from pglast import parse_sql
@@ -48,9 +49,7 @@ PERIODS = [
     },
 ]
 VARS = {"reporting_as_of": "2026-11-02T12:07:00Z", "coverage_tracking_periods": PERIODS}
-schema = yaml.safe_load(
-    (ROOT / "dbt_bikewatch/models/reporting/reporting_schema.yml").read_text()
-)
+schema = yaml.safe_load((ROOT / "dbt_bikewatch/models/reporting/reporting_schema.yml").read_text())
 order = [
     "int_bw_tracking_periods",
     "int_bw_expected_buckets",
@@ -88,8 +87,7 @@ models = {
     for name in order
 }
 tests = {
-    p.stem: render(p.read_text())
-    for p in sorted((ROOT / "dbt_bikewatch/tests").glob("*.sql"))
+    p.stem: render(p.read_text()) for p in sorted((ROOT / "dbt_bikewatch/tests").glob("*.sql"))
 }
 for model in schema["models"]:
     for column in model.get("columns", []):
@@ -99,15 +97,15 @@ for model in schema["models"]:
             if name == "not_null":
                 sql = f"select * from {table} where {c} is null"
             elif name == "unique":
-                sql = f"select {c} from {table} where {c} is not null group by {c} having count(*)>1"
+                sql = (
+                    f"select {c} from {table} where {c} is not null group by {c} having count(*)>1"
+                )
             elif name == "relationships":
                 args = t[name]["arguments"]
                 parent = args["to"].split("'")[1]
                 sql = f"select * from {table} child where {c} is not null and not exists (select 1 from {ref(parent)} parent where parent.{args['field']}=child.{c})"
             elif name == "accepted_values":
-                values = ", ".join(
-                    "'" + v + "'" for v in t[name]["arguments"]["values"]
-                )
+                values = ", ".join("'" + v + "'" for v in t[name]["arguments"]["values"])
                 sql = f"select * from {table} where {c} not in ({values})"
             else:
                 raise ValueError(name)

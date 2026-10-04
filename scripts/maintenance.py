@@ -171,9 +171,7 @@ def cleanup(db, run_key, started_at, apply):
     for name in candidates:
         # RESTRICT aborts cleanup if a view still depends on this snapshot.
         db.execute(
-            sql.SQL("DROP TABLE {} RESTRICT").format(
-                sql.Identifier("reporting_versions", name)
-            )
+            sql.SQL("DROP TABLE {} RESTRICT").format(sql.Identifier("reporting_versions", name))
         )
 
     # Deletions and their success record commit together.
@@ -264,9 +262,7 @@ def usage_report(db, run_key, started_at, output):
         "database_bytes": database_bytes,
         "schema_bytes": dict(sizes),
         "retained_observation_count": observation_count,
-        "latest_collection": (
-            latest_collection.isoformat() if latest_collection else None
-        ),
+        "latest_collection": (latest_collection.isoformat() if latest_collection else None),
         "published_release": (
             {
                 "run_id": str(release[0]),

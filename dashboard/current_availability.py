@@ -10,7 +10,6 @@ import streamlit as st
 from dotenv import load_dotenv
 from psycopg.rows import dict_row
 
-
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
 
@@ -150,9 +149,7 @@ def show_current_availability():
     try:
         stations, health = read_published_snapshot()
     except (KeyError, ValueError, FileNotFoundError, psycopg.Error) as error:
-        st.error(
-            f"Unable to read the published dashboard data ({type(error).__name__})."
-        )
+        st.error(f"Unable to read the published dashboard data ({type(error).__name__}).")
         return
 
     now = datetime.now(UTC)
@@ -177,17 +174,13 @@ def show_current_availability():
     rentable_bikes = sum(
         row["bikes_available"]
         for row in fresh
-        if row["is_installed"]
-        and row["is_renting"]
-        and row["bikes_available"] is not None
+        if row["is_installed"] and row["is_renting"] and row["bikes_available"] is not None
     )
 
     returnable_docks = sum(
         row["docks_available"]
         for row in fresh
-        if row["is_installed"]
-        and row["is_returning"]
-        and row["docks_available"] is not None
+        if row["is_installed"] and row["is_returning"] and row["docks_available"] is not None
     )
 
     first, second, third = st.columns(3)
@@ -274,14 +267,10 @@ def show_current_availability():
                 "Bikes observed": (row["bikes_available"] if fresh_reading else None),
                 "Docks observed": (row["docks_available"] if fresh_reading else None),
                 "Rentals open": (
-                    bool(row["is_installed"] and row["is_renting"])
-                    if fresh_reading
-                    else None
+                    bool(row["is_installed"] and row["is_renting"]) if fresh_reading else None
                 ),
                 "Returns open": (
-                    bool(row["is_installed"] and row["is_returning"])
-                    if fresh_reading
-                    else None
+                    bool(row["is_installed"] and row["is_returning"]) if fresh_reading else None
                 ),
                 "Station age (minutes)": (
                     reported_age_minutes(row, now) if fresh_reading else None
@@ -300,9 +289,7 @@ def show_current_availability():
         use_container_width=True,
     )
 
-    fallback_count = sum(
-        bool(row["using_older_trusted_observation"]) for row in stations
-    )
+    fallback_count = sum(bool(row["using_older_trusted_observation"]) for row in stations)
 
     if fallback_count:
         st.warning(

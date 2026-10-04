@@ -158,9 +158,7 @@ def test_rejected_and_missing_records_are_counted(feeds):
     assert collector.collect(None, "fixture") == 1
 
     with connect_ci() as db:
-        status, metrics = db.execute(
-            "SELECT status, metrics FROM ops.pipeline_run"
-        ).fetchone()
+        status, metrics = db.execute("SELECT status, metrics FROM ops.pipeline_run").fetchone()
 
         # One invalid row and one missing station should produce a partial run.
         assert status == "partial"
@@ -204,22 +202,16 @@ def test_status_batch_rolls_back_but_audit_and_metadata_survive(feeds):
             # Station B causes the observation batch to fail.
             assert collector.collect(None, "fixture") == 1
 
-            observations = db.execute(
-                "SELECT count(*) FROM raw.station_observation"
-            ).fetchone()[0]
+            observations = db.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0]
 
             # Metadata was committed separately and should survive.
-            metadata = db.execute(
-                "SELECT count(*) FROM raw.station_metadata"
-            ).fetchone()[0]
+            metadata = db.execute("SELECT count(*) FROM raw.station_metadata").fetchone()[0]
 
             assert observations == 0
             assert metadata == 3
 
             # The audit record should still show that the pipeline failed.
-            status, metrics = db.execute(
-                "SELECT status, metrics FROM ops.pipeline_run"
-            ).fetchone()
+            status, metrics = db.execute("SELECT status, metrics FROM ops.pipeline_run").fetchone()
 
             assert status == "failed"
 

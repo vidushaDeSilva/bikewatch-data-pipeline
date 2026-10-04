@@ -84,9 +84,7 @@ def check_freshness_artifact(path):
         raise PublicationBlocked("Freshness results are incomplete.")
 
     if any(r["status"] not in ("pass", "warn") for r in results):
-        raise PublicationBlocked(
-            "Source freshness failed; collect fresh data before publication."
-        )
+        raise PublicationBlocked("Source freshness failed; collect fresh data before publication.")
 
     return [
         {
@@ -116,21 +114,15 @@ def check_build_artifacts(target_path):
     if any(uid not in results for uid in expected):
         raise PublicationBlocked("Some enabled models/tests did not run.")
 
-    model_names = {
-        node["name"] for node in expected.values() if node["resource_type"] == "model"
-    }
+    model_names = {node["name"] for node in expected.values() if node["resource_type"] == "model"}
 
-    test_names = {
-        node["name"] for node in expected.values() if node["resource_type"] == "test"
-    }
+    test_names = {node["name"] for node in expected.values() if node["resource_type"] == "test"}
 
     if not REQUIRED_MODELS <= model_names or not REQUIRED_TESTS <= test_names:
         raise PublicationBlocked("Required reporting models or gates are missing.")
 
     if len(test_names) < 69:
-        raise PublicationBlocked(
-            "Expected the existing 68 tests plus the new coverage test."
-        )
+        raise PublicationBlocked("Expected the existing 68 tests plus the new coverage test.")
 
     for uid, node in expected.items():
         status = results[uid]["status"]
@@ -140,11 +132,7 @@ def check_build_artifacts(target_path):
                 raise PublicationBlocked("A model failed or was skipped.")
 
             if node["name"] in REQUIRED_MODELS:
-                wanted = (
-                    "bw_candidate_analytics"
-                    if node["name"] in MODELS
-                    else "bw_candidate"
-                )
+                wanted = "bw_candidate_analytics" if node["name"] in MODELS else "bw_candidate"
 
                 if node["schema"] != wanted:
                     raise PublicationBlocked(
@@ -154,10 +142,7 @@ def check_build_artifacts(target_path):
         elif status not in ("pass", "warn"):
             raise PublicationBlocked(f"Data test {node['name']} returned {status}.")
 
-        elif (
-            status == "warn"
-            and node.get("config", {}).get("severity", "error").lower() != "warn"
-        ):
+        elif status == "warn" and node.get("config", {}).get("severity", "error").lower() != "warn":
             raise PublicationBlocked("A critical test returned warning results.")
 
         elif node["name"] in REQUIRED_TESTS - WARNING_TESTS:
@@ -232,14 +217,12 @@ def main():
     with connect() as connection, connect() as audit:
         try:
             with connection.transaction():
-                connection.execute(
-                    "SET LOCAL idle_in_transaction_session_timeout = '15min'"
-                )
+                connection.execute("SET LOCAL idle_in_transaction_session_timeout = '15min'")
 
                 # Held throughout the candidate build and publication.
-                locked = connection.execute(
-                    "SELECT pg_try_advisory_xact_lock(5303, 1)"
-                ).fetchone()[0]
+                locked = connection.execute("SELECT pg_try_advisory_xact_lock(5303, 1)").fetchone()[
+                    0
+                ]
 
                 if not locked:
                     raise PublicationBlocked("Another publication is already running.")
@@ -299,9 +282,7 @@ def main():
                     "scheduled" if config.get("coverage_tracking_periods") else "manual"
                 )
 
-                (run_dir / "reporting_vars.json").write_text(
-                    json.dumps(config, indent=2)
-                )
+                (run_dir / "reporting_vars.json").write_text(json.dumps(config, indent=2))
 
                 with TemporaryDirectory(prefix="bikewatch-profile-") as temp:
                     profiles = Path(temp)
@@ -314,13 +295,9 @@ def main():
                                     "type": "postgres",
                                     "host": ("{{ env_var('DBT_HOST') }}"),
                                     "port": ("{{ env_var('DBT_PORT', '5432') | int }}"),
-                                    "dbname": (
-                                        "{{ env_var('DBT_DBNAME', 'bikewatch') }}"
-                                    ),
+                                    "dbname": ("{{ env_var('DBT_DBNAME', 'bikewatch') }}"),
                                     "user": "bikewatch_transform",
-                                    "password": (
-                                        "{{ env_var('DBT_ENV_SECRET_PASSWORD') }}"
-                                    ),
+                                    "password": ("{{ env_var('DBT_ENV_SECRET_PASSWORD') }}"),
                                     "schema": "bw_candidate",
                                     "threads": 1,
                                     "connect_timeout": 20,
@@ -385,9 +362,7 @@ def main():
                     )
 
                     if result:
-                        raise PublicationBlocked(
-                            "Freshness command exited unsuccessfully."
-                        )
+                        raise PublicationBlocked("Freshness command exited unsuccessfully.")
 
                     phase = "build_and_tests"
                     set_phase(phase)
@@ -423,9 +398,9 @@ def main():
                             "reporting_mart_ranges",
                         )
 
-                        results = json.loads(
-                            (target_path / "run_results.json").read_text()
-                        )["results"]
+                        results = json.loads((target_path / "run_results.json").read_text())[
+                            "results"
+                        ]
 
                         proof_triggered = result != 0 and any(
                             r["unique_id"] == "test.bikewatch.reporting_mart_ranges"
@@ -439,9 +414,7 @@ def main():
                                 "Failure drill did not produce the expected critical test failure."
                             )
 
-                        summary["failure_drill"] = (
-                            "critical range test failed as intended"
-                        )
+                        summary["failure_drill"] = "critical range test failed as intended"
 
                         raise PublicationBlocked(
                             "Intentional critical-test failure; publication blocked."
@@ -462,9 +435,7 @@ def main():
                     )
 
                     if result:
-                        raise PublicationBlocked(
-                            "Final freshness command exited unsuccessfully."
-                        )
+                        raise PublicationBlocked("Final freshness command exited unsuccessfully.")
 
                     # Recent raw data must not conceal an old candidate.
                     candidate_is_recent = connection.execute(
@@ -508,9 +479,7 @@ def main():
                 status = "blocked" if isinstance(exc, PublicationBlocked) else "failed"
 
                 summary["reason"] = (
-                    str(exc)
-                    if isinstance(exc, PublicationBlocked)
-                    else type(exc).__name__
+                    str(exc) if isinstance(exc, PublicationBlocked) else type(exc).__name__
                 )
 
                 audit.execute(
@@ -545,9 +514,7 @@ def main():
 
             # Resolve an error reported after a successful commit.
             if current == (run_id,):
-                print(
-                    f"Release {run_id} is committed; a connection error occurred after commit."
-                )
+                print(f"Release {run_id} is committed; a connection error occurred after commit.")
 
                 return 0
 
@@ -558,9 +525,7 @@ def main():
                     ) from None
 
                 if published_fingerprints(audit) != old_fingerprints:
-                    raise RuntimeError(
-                        "Failure drill found changed published rows."
-                    ) from None
+                    raise RuntimeError("Failure drill found changed published rows.") from None
 
                 print(
                     "PASS: critical test failed; published release "
@@ -571,9 +536,7 @@ def main():
 
                 return 0
 
-            message = (
-                str(exc) if isinstance(exc, PublicationBlocked) else type(exc).__name__
-            )
+            message = str(exc) if isinstance(exc, PublicationBlocked) else type(exc).__name__
 
             print(
                 f"Not published: {message}. Phase: {phase}. Attempt: {run_id}",

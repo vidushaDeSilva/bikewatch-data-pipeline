@@ -239,14 +239,10 @@ def publish_candidate(connection, run_id, cutoff, summary):
 
         connection.execute(sql.SQL("REVOKE ALL ON {} FROM PUBLIC").format(public))
 
-        connection.execute(
-            sql.SQL("REVOKE ALL ON {} FROM bikewatch_dashboard").format(public)
-        )
+        connection.execute(sql.SQL("REVOKE ALL ON {} FROM bikewatch_dashboard").format(public))
 
         if model.startswith("mart_"):
-            connection.execute(
-                sql.SQL("GRANT SELECT ON {} TO bikewatch_dashboard").format(public)
-            )
+            connection.execute(sql.SQL("GRANT SELECT ON {} TO bikewatch_dashboard").format(public))
 
     summary = dict(
         summary,

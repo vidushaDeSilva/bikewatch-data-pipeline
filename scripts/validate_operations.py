@@ -11,7 +11,6 @@ from pathlib import Path
 import psycopg
 from dotenv import load_dotenv
 
-
 ROOT = Path(__file__).resolve().parents[1]
 BUCKET = timedelta(minutes=15)
 DAYS = 7
@@ -137,9 +136,7 @@ def database_results(start, end):
         ):
             cleanup[run_key] = status
 
-        database_bytes = db.execute(
-            "SELECT pg_database_size(current_database())"
-        ).fetchone()[0]
+        database_bytes = db.execute("SELECT pg_database_size(current_database())").fetchone()[0]
 
     return collection, publication, coverage, cleanup, database_bytes
 
@@ -224,14 +221,10 @@ def main():
     )
 
     missing_collection = [
-        bucket.isoformat()
-        for bucket in buckets
-        if "succeeded" not in collection[bucket]
+        bucket.isoformat() for bucket in buckets if "succeeded" not in collection[bucket]
     ]
     missing_publication = [
-        bucket.isoformat()
-        for bucket in buckets
-        if "published" not in publication[bucket]
+        bucket.isoformat() for bucket in buckets if "published" not in publication[bucket]
     ]
     coverage_shortfalls = [
         {
@@ -243,9 +236,7 @@ def main():
     ]
 
     dates = [start.date() + timedelta(days=offset) for offset in range(DAYS)]
-    cleanup_failures = [
-        day.isoformat() for day in dates if cleanup.get(day) != "succeeded"
-    ]
+    cleanup_failures = [day.isoformat() for day in dates if cleanup.get(day) != "succeeded"]
 
     github = github_schedule_results(args.github_runs, start, end)
     neon = neon_results(args)

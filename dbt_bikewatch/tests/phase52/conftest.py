@@ -149,9 +149,7 @@ def database(database_ready):
 
 @pytest.fixture
 def run_collector(database, source_feeds, monkeypatch):
-    tracked = {
-        row["station_id"] for row in source_feeds["station_status"]["data"]["stations"]
-    }
+    tracked = {row["station_id"] for row in source_feeds["station_status"]["data"]["stations"]}
 
     monkeypatch.setenv(
         "BIKEWATCH_DATABASE_URL",
