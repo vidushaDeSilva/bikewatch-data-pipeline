@@ -185,17 +185,3 @@ jobs:
             .bikewatch-publication/*/reporting_vars.json
           retention-days: 7
           if-no-files-found: ignore
-
-      - name: Save diagnostics after failure
-        if: ${{ failure() }}
-        timeout-minutes: 1
-        uses: actions/upload-artifact@v7
-        with:
-          name: pipeline-failure-${{ github.run_id }}-${{ github.run_attempt }}
-          include-hidden-files: true
-          path: |
-            .bikewatch-publication/*/target/run_results.json
-            .bikewatch-publication/*/target/sources.json
-            .bikewatch-publication/*/reporting_vars.json
-          retention-days: 7
-          if-no-files-found: ignore
