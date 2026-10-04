@@ -1,4 +1,4 @@
-"""Define reusable reliability and pipeline-health calculations."""
+"""Define reusable reliability, freshness, and pipeline-health rules."""
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -6,15 +6,18 @@ from datetime import datetime, timezone
 
 @dataclass(frozen=True)
 class HealthAssessment:
-    """Describe the derived pipeline state shown by the dashboard."""
+    """Describe the pipeline state shown by the health dashboard."""
 
     state: str
     colour: str
     explanation: str
 
 
-def safe_rate(numerator: int | float, denominator: int | float) -> float | None:
-    """Return a percentage, or None when the denominator is zero."""
+def safe_rate(
+    numerator: int | float,
+    denominator: int | float,
+) -> float | None:
+    """Return a percentage, or None without a valid denominator."""
     if denominator is None or denominator <= 0:
         return None
 
@@ -33,12 +36,12 @@ def age_minutes(value: datetime | None) -> float | None:
 
 
 def format_rate(value: float | None) -> str:
-    """Format a percentage for a dashboard metric."""
+    """Format a percentage for dashboard display."""
     return "—" if value is None else f"{value:.1f}%"
 
 
 def format_age(value: float | None) -> str:
-    """Format an age in minutes or hours."""
+    """Format an age using minutes or hours."""
     if value is None:
         return "—"
 
@@ -46,6 +49,65 @@ def format_age(value: float | None) -> str:
         return f"{value:.0f} min"
 
     return f"{value / 60:.1f} h"
+
+
+def classify_current_observation(
+    *,
+    has_trusted_observation: bool,
+    freshness_valid_until: datetime | None,
+    using_older_trusted_observation: bool,
+    is_installed: bool | None,
+    is_renting: bool | None,
+    is_returning: bool | None,
+    bikes_available: int | None,
+    docks_available: int | None,
+    checked_at: datetime | None = None,
+) -> str:
+    """Classify how a station observation may be presented."""
+    checked_at = checked_at or datetime.now(timezone.utc)
+
+    if checked_at.tzinfo is None:
+        checked_at = checked_at.replace(tzinfo=timezone.utc)
+
+    if not has_trusted_observation:
+        return "Missing"
+
+    if freshness_valid_until is None:
+        return "Stale"
+
+    if freshness_valid_until.tzinfo is None:
+        freshness_valid_until = freshness_valid_until.replace(tzinfo=timezone.utc)
+
+    if checked_at > freshness_valid_until:
+        return "Stale"
+
+    if using_older_trusted_observation:
+        return "Older trusted reading"
+
+    if is_installed is False:
+        return "Not installed"
+
+    if is_renting is False and is_returning is False:
+        return "Closed"
+
+    if is_renting is False:
+        return "Rentals closed"
+
+    if is_returning is False:
+        return "Returns closed"
+
+    if bikes_available == 0:
+        return "No bikes"
+
+    if docks_available == 0:
+        return "No docks"
+
+    return "Open"
+
+
+def may_show_current_counts(state: str) -> bool:
+    """Return whether counts may be labelled as current."""
+    return state not in {"Missing", "Stale"}
 
 
 def classify_pipeline_health(
@@ -94,11 +156,11 @@ def classify_pipeline_health(
         return HealthAssessment(
             "Delayed",
             "orange",
-            "Data remains usable, but freshness or interval coverage is delayed.",
+            "Data remains usable, but freshness or coverage is delayed.",
         )
 
     return HealthAssessment(
         "Healthy",
         "green",
-        "Collection and publication are current with no recent critical gaps.",
+        "Collection and publication are current with no critical gaps.",
     )

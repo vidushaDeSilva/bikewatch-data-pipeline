@@ -1,7 +1,11 @@
 """Test the dashboard's reliability and pipeline-health rules."""
 
+from datetime import datetime, timedelta, timezone
+
 from dashboard.metrics import (
+    classify_current_observation,
     classify_pipeline_health,
+    may_show_current_counts,
     safe_rate,
 )
 
@@ -80,3 +84,56 @@ def test_blocked_publication_is_degraded():
     )
 
     assert result.state == "Degraded"
+
+
+def current_state(**changes):
+    """Create a valid current observation with selected overrides."""
+    values = {
+        "has_trusted_observation": True,
+        "freshness_valid_until": (datetime.now(timezone.utc) + timedelta(minutes=10)),
+        "using_older_trusted_observation": False,
+        "is_installed": True,
+        "is_renting": True,
+        "is_returning": True,
+        "bikes_available": 4,
+        "docks_available": 6,
+    }
+
+    values.update(changes)
+    return classify_current_observation(**values)
+
+
+def test_missing_observation_does_not_become_zero_availability():
+    """Missing source data must remain explicitly unavailable."""
+    state = current_state(
+        has_trusted_observation=False,
+        bikes_available=None,
+        docks_available=None,
+    )
+
+    assert state == "Missing"
+    assert may_show_current_counts(state) is False
+
+
+def test_expired_observation_is_stale():
+    """Expired trusted values must not be labelled current."""
+    state = current_state(freshness_valid_until=(datetime.now(timezone.utc) - timedelta(seconds=1)))
+
+    assert state == "Stale"
+    assert may_show_current_counts(state) is False
+
+
+def test_real_zero_bikes_remains_a_valid_operating_state():
+    """A fresh zero-bike observation is different from missing data."""
+    state = current_state(bikes_available=0)
+
+    assert state == "No bikes"
+    assert may_show_current_counts(state) is True
+
+
+def test_older_trusted_reading_is_explicit():
+    """A valid fallback must be labelled as an older trusted reading."""
+    state = current_state(using_older_trusted_observation=True)
+
+    assert state == "Older trusted reading"
+    assert may_show_current_counts(state) is True
