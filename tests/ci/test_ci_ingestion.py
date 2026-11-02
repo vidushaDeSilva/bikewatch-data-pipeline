@@ -154,7 +154,7 @@ def test_rejected_and_missing_records_are_counted(feeds):
     # Remove station C completely from the status feed.
     payloads["status"].pop()
 
-    # Collector returns non-zero because the run is only partially successful.
+    # Rejected data blocks publication even when valid records were committed.
     assert collector.collect(None, "fixture") == 1
 
     with connect_ci() as db:
@@ -230,3 +230,20 @@ def test_status_batch_rolls_back_but_audit_and_metadata_survive(feeds):
                 DROP FUNCTION raw.ci_fail();
                 """
             )
+
+
+def test_missing_station_without_rejections_keeps_reporting_available(feeds):
+    """A missing GBFS station commits partial coverage without failing Actions."""
+    payloads, _ = feeds
+    payloads["information"].pop()
+    payloads["status"].pop()
+
+    assert collector.collect(None, "fixture") == 0
+
+    with connect_ci() as db:
+        status, metrics = db.execute("SELECT status, metrics FROM ops.pipeline_run").fetchone()
+        assert status == "partial"
+        assert metrics["station_information"]["missing"] == 1
+        assert metrics["station_status"]["missing"] == 1
+        assert metrics["station_status"]["rejected"] == 0
+        assert db.execute("SELECT count(*) FROM raw.station_observation").fetchone()[0] == 2

@@ -1,6 +1,5 @@
 """Show published BikeWatch station availability with live freshness labels."""
 
-import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,23 +19,14 @@ st.set_page_config(
 )
 
 
-def tracked_station_ids():
-    """Load the same station selection used by the collector."""
-    path = ROOT / "config/tracked_stations.json"
-    values = json.loads(path.read_text(encoding="utf-8"))
-
-    if not isinstance(values, list) or not values:
-        raise ValueError("Expected a nonempty tracked-station array.")
-
-    return values
-
-
 @st.cache_data(ttl=900, show_spinner=False)
 def read_published_snapshot():
-    """Read the published mart and release health in one database snapshot."""
-    dsn = os.environ["BIKEWATCH_DASHBOARD_URL"]
-    ids = tracked_station_ids()
+    """Read the published active station population in one database snapshot.
 
+    The mart already applies the versioned tracking periods. Reading the
+    local JSON station list could hide the old or new station at cutover.
+    """
+    dsn = os.environ["BIKEWATCH_DASHBOARD_URL"]
     with psycopg.connect(
         dsn,
         row_factory=dict_row,
@@ -66,10 +56,8 @@ def read_published_snapshot():
                     latest_quality_reason,
                     freshness_valid_until
                 FROM analytics.mart_station_current
-                WHERE station_id = ANY(%s)
                 ORDER BY station_name NULLS LAST, station_id
                 """,
-                (ids,),
             ).fetchall()
 
             health = db.execute(

@@ -18,8 +18,10 @@ from bikewatch.ingestion.models import (
     StationInformation,
     StationStatus,
 )
+from scripts.reporting_config import load_reporting_config, utc_boundary
 
 STATIONS_FILE = Path("config/tracked_stations.json")
+REPORTING_FILE = Path("config/bikewatch_reporting_vars.yml")
 
 FEED_MODELS = {
     "station_information": StationInformation,
@@ -48,6 +50,54 @@ def load_station_ids():
         raise ValueError("Configure 1–20 distinct, non-empty station ID strings")
 
     return set(values)
+
+
+def load_effective_station_ids(as_of):
+    """Use the active reporting population until a scheduled replacement starts.
+
+    The JSON file records the target 20-station population. During a planned
+    future cutover the old station remains active until the UTC boundary. A
+    mismatched population outside a valid future swap is a configuration error.
+    """
+    planned = load_station_ids()
+    if not REPORTING_FILE.exists():
+        return planned
+
+    periods = load_reporting_config(REPORTING_FILE).get("coverage_tracking_periods", [])
+    active = {
+        period["station_id"]
+        for period in periods
+        if utc_boundary(period["start_bucket"]) <= as_of
+        and (period.get("end_bucket") is None or as_of < utc_boundary(period["end_bucket"]))
+    }
+    if not active or active == planned:
+        return planned
+
+    incoming = planned - active
+    outgoing = active - planned
+    if (
+        len(active) == len(planned)
+        and len(incoming) == len(outgoing)
+        and all(
+            any(
+                period["station_id"] == station_id and utc_boundary(period["start_bucket"]) > as_of
+                for period in periods
+            )
+            for station_id in incoming
+        )
+        and all(
+            any(
+                period["station_id"] == station_id
+                and period.get("end_bucket") is not None
+                and utc_boundary(period["end_bucket"]) > as_of
+                for period in periods
+            )
+            for station_id in outgoing
+        )
+    ):
+        return active
+
+    raise ValueError("Tracked stations disagree with active reporting periods")
 
 
 def set_stage(db, run_id, stage):
@@ -162,7 +212,8 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
             key = "accepted" if inserted else "duplicate"
             counts[key] += 1
 
-        counts["missing"] = len(tracked - seen)
+        missing_station_ids = sorted(tracked - seen)
+        counts["missing"] = len(missing_station_ids)
 
         # Every valid record is either newly inserted or already stored.
         if counts["valid"] != (counts["accepted"] + counts["duplicate"]):
@@ -194,6 +245,7 @@ def load_feed(db, client, run_id, feed_name, url, bucket, tracked):
                 "feed": feed_name,
                 "collection_bucket": bucket.isoformat(),
                 "counts": counts,
+                "missing_station_ids": missing_station_ids,
             }
         ),
         flush=True,
@@ -252,9 +304,23 @@ def initialize_stations(client, discovery_url):
         print(f"{station.station_id} | {station.name}")
 
 
+def exit_code_for_outcome(outcome, summaries):
+    """Allow missing-only partial runs; keep rejected data and system errors blocking.
+
+    Reporting can publish incomplete-but-valid station coverage using its own
+    quality gates. Rejected records mean a separate data-integrity issue and
+    should still trigger GitHub failure for investigation.
+    """
+    if outcome == "succeeded":
+        return 0
+    if outcome == "partial" and all(not summary["rejected"] for summary in summaries):
+        return 0
+    return 1
+
+
 def collect(client, discovery_url):
-    tracked = load_station_ids()
     started_at = now_utc()
+    tracked = load_effective_station_ids(started_at)
     run_id = uuid4()
 
     bucket = started_at.replace(
@@ -355,7 +421,16 @@ def collect(client, discovery_url):
                 )
             )
 
-            return 0 if outcome == "succeeded" else 1
+            if outcome == "partial" and not any(s["rejected"] for s in summaries):
+                # GitHub shows a warning, while preserving a successful job
+                # exit so reporting can publish the 19 valid stations.
+                print(
+                    "::warning title=BikeWatch station coverage::"
+                    "Missing stations were recorded; continuing to reporting.",
+                    flush=True,
+                )
+
+            return exit_code_for_outcome(outcome, summaries)
 
         except Exception as exc:
             # Keep the failing stage and store only the exception type.

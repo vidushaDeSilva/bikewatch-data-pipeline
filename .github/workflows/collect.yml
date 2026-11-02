@@ -58,14 +58,14 @@ jobs:
           import os
           from datetime import datetime, timezone
 
-          from bikewatch.ingestion.collect import load_station_ids
+          from bikewatch.ingestion.collect import load_effective_station_ids
           from reporting_config import load_reporting_config, utc_boundary
 
-          tracked = load_station_ids()
+          now = datetime.now(timezone.utc)
+          tracked = load_effective_station_ids(now)
           config = load_reporting_config("config/bikewatch_reporting_vars.yml")
 
           if os.environ["GITHUB_EVENT_NAME"] == "schedule":
-              now = datetime.now(timezone.utc)
 
               active = {
                   period["station_id"]
@@ -83,7 +83,7 @@ jobs:
                       "before scheduled collection."
                   )
 
-          print(f"Validated {len(tracked)} tracked stations.")
+          print(f"Validated {len(tracked)} effective tracked stations.")
           PY
 
       - name: Diagnose ingestion database connection
